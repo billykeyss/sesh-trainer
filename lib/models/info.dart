@@ -1,8 +1,10 @@
 import 'package:flutter_blue/flutter_blue.dart';
 
 class Info {
-  final int WEIGHT_LBS = 0;
-  final int WEIGHT_KGS = 1;
+  static const int WEIGHT_LBS = 0;
+  static const int WEIGHT_KGS = 1;
+  static const String Pounds = "lbs";
+  static const String Kilogram = "kg";
 
   final int weight;
   final int unit;
@@ -23,8 +25,8 @@ class Info {
 
   String getUnitString() {
     if (unit == WEIGHT_KGS) {
-      return "KG";
+      return Kilogram;
     }
-    return "LB";
+    return Pounds;
   }
 }

@@ -8,6 +8,14 @@ class WeightGraph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double minY = 0;
+    double maxY = 5;
+
+    if (graphData.isNotEmpty) {
+      double dataMaxY = graphData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
+      maxY = dataMaxY > 5 ? dataMaxY : 5; // Ensure maxY is at least 5
+    }
+
     return SizedBox(
       height: 200,
       child: LineChart(
@@ -18,13 +26,14 @@ class WeightGraph extends StatelessWidget {
           lineBarsData: [
             LineChartBarData(
               spots: graphData,
-              isCurved: true,
+              isCurved: false,
               color: Colors.blue,
               barWidth: 2,
-              belowBarData: BarAreaData(show: false),
+              belowBarData: BarAreaData(show: true),
             ),
           ],
-          minY: 5,
+          minY: minY,
+          maxY: maxY + 5,
         ),
       ),
     );

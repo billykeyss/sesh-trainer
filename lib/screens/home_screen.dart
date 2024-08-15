@@ -1,7 +1,9 @@
+import 'package:ble_scale_app/models/info.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:math';
+import 'dart:async';
 import '../models/res_json.dart';
 import '../services/ble_service.dart';
 import '../widgets/display_card.dart';
@@ -17,13 +19,19 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   BluetoothDevice? connectedDevice;
   double? weight;
-  double maxWeight = 0;
+  Map<String, double> maxWeights = {
+    Info.Kilogram: 0.0,
+    Info.Pounds: 0.0
+  }; // Map to store max weights
   double averageWeight = 0.0;
   List<FlSpot> graphData = [];
   List<double> weightRecords = [];
   bool recordData = false;
   int lastUpdateTime = 0;
-  String weightUnit = "kg";
+  String weightUnit = Info.Kilogram;
+  Stopwatch stopwatch = Stopwatch(); // Stopwatch to track elapsed time
+  String elapsedTime = '0:00';
+  Timer? timer;
 
   @override
   void initState() {
@@ -38,17 +46,20 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   }
 
   void scanForDevices() {
-    print("Starting scan for devices");
     startScan((ResJson res) {
       if (res.code == 1) {
         setState(() {
+          weight = max(res.data.weight / -100.0, 0.0);
+          weightUnit = res.data.getUnitString();
           if (recordData) {
-            print(res.data);
-            weight = max(res.data.weight / -100.0, 0.0);
             connectedDevice = res.data.device;
-            weightUnit = res.data.getUnitString();
             updateGraphData(weight!);
-            maxWeight = max(maxWeight, weight ?? maxWeight);
+
+            // Update max weight based on unit
+            if (weightUnit == Info.Kilogram || weightUnit == Info.Pounds) {
+              maxWeights[weightUnit] = max(
+                  maxWeights[weightUnit]!, weight ?? maxWeights[weightUnit]!);
+            }
           }
         });
       } else {
@@ -61,7 +72,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     setState(() {
       if (recordData) {
         int currentTime = DateTime.now().millisecondsSinceEpoch;
-        if (currentTime - lastUpdateTime> 1000) {
+        if (currentTime - lastUpdateTime > 250) {
           graphData.add(FlSpot(graphData.length.toDouble(), newWeight));
           lastUpdateTime = currentTime;
         }
@@ -83,20 +94,39 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       graphData.clear();
       weightRecords.clear();
       averageWeight = 0.0;
-      maxWeight = 0.0;
+      maxWeights = {
+        Info.Kilogram: 0.0,
+        Info.Pounds: 0.0
+      }; // Reset max weights map
+      stopwatch.reset();
     });
   }
 
   void stopData() {
     setState(() {
       recordData = false;
+      stopwatch.stop();
+      timer?.cancel();
     });
   }
 
   void startData() {
     setState(() {
       recordData = true;
+      stopwatch.start();
+      timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+        if (!recordData) {
+          timer.cancel();
+        }
+        setState(() {}); // Trigger a rebuild to update the stopwatch display
+      });
     });
+  }
+
+  String formatElapsedTime(Duration duration) {
+    int minutes = duration.inMinutes;
+    int seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(1, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -116,13 +146,18 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
               children: [
                 DisplayCard(
                     title: 'Weight',
-                    value: (weight != null ? weight!.toStringAsFixed(1) : '0.0') + " " + weightUnit,
+                    value: '${weight?.toStringAsFixed(1) ?? '0.0'} $weightUnit',
                     unit: ''),
                 DisplayCard(
-                    title: 'Max', value: maxWeight.toStringAsFixed(1), unit: ''),
+                    title: 'Max',
+                    value:
+                        '${maxWeights[weightUnit]?.toStringAsFixed(1) ?? '0.0'} $weightUnit',
+                    unit: ''),
                 DisplayCard(
-                    title: 'Average',
-                    value: averageWeight.toString(),
+                    title: 'Average', value: '$averageWeight', unit: ''),
+                DisplayCard(
+                    title: 'Elapsed Time',
+                    value: formatElapsedTime(stopwatch.elapsed),
                     unit: ''),
               ],
             ),
