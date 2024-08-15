@@ -24,9 +24,11 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     Info.Pounds: 0.0
   }; // Map to store max weights
   double averageWeight = 0.0;
+  double totalLoad = 0.0; // Variable to store the Area Under the Curve (AUC)
   List<FlSpot> graphData = [];
   List<double> weightRecords = [];
   bool recordData = false;
+  int lastDataReceivedTime = 0;
   int lastUpdateTime = 0;
   String weightUnit = Info.Kilogram;
   Stopwatch stopwatch = Stopwatch(); // Stopwatch to track elapsed time
@@ -37,7 +39,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   void initState() {
     super.initState();
     requestPermissions();
-    scanForDevices();
+    Future.delayed(const Duration(seconds: 2), scanForDevices);
   }
 
   Future<void> requestPermissions() async {
@@ -49,6 +51,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     startScan((ResJson res) {
       if (res.code == 1) {
         setState(() {
+          lastDataReceivedTime = DateTime.now().millisecondsSinceEpoch;
           weight = max(res.data.weight / -100.0, 0.0);
           weightUnit = res.data.getUnitString();
           if (recordData) {
@@ -72,13 +75,27 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     setState(() {
       if (recordData) {
         int currentTime = DateTime.now().millisecondsSinceEpoch;
+
         if (currentTime - lastUpdateTime > 250) {
-          graphData.add(FlSpot(graphData.length.toDouble(), newWeight));
+          double elapsedTimeInSeconds = stopwatch.elapsedMilliseconds / 1000.0;
+          graphData.add(FlSpot(elapsedTimeInSeconds, newWeight));
           lastUpdateTime = currentTime;
         }
+
+        if (graphData.isNotEmpty) {
+          int timeDelta = currentTime - lastUpdateTime;
+
+          // Calculate the area under the curve (AUC) using the trapezoidal rule
+          double previousWeight = graphData.last.y;
+          double area =
+              ((previousWeight + newWeight) * 9.81 / 2) * (timeDelta / 1000.0);
+          totalLoad += area;
+        }
+
         if (newWeight > 0) {
           weightRecords.add(newWeight);
         }
+
         averageWeight = weightRecords.isNotEmpty
             ? double.parse(
                 (weightRecords.reduce((a, b) => a + b) / weightRecords.length)
@@ -94,6 +111,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       graphData.clear();
       weightRecords.clear();
       averageWeight = 0.0;
+      totalLoad = 0.0; // Reset total load
       maxWeights = {
         Info.Kilogram: 0.0,
         Info.Pounds: 0.0
@@ -138,33 +156,50 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       body: Column(
         children: [
           Flexible(
-            flex: 12, // Adjust this flex value based on your needs
+            flex: 8, // Adjust this flex value based on your needs
             child: GridView.count(
               crossAxisCount: 2,
               childAspectRatio: 1,
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(1.0),
               children: [
                 DisplayCard(
                     title: 'Weight',
-                    value: '${weight?.toStringAsFixed(1) ?? '0.0'} $weightUnit',
-                    unit: ''),
+                    value: '${weight?.toStringAsFixed(1) ?? '0.0'}',
+                    unit: weightUnit),
                 DisplayCard(
                     title: 'Max',
                     value:
-                        '${maxWeights[weightUnit]?.toStringAsFixed(1) ?? '0.0'} $weightUnit',
-                    unit: ''),
+                        '${maxWeights[weightUnit]?.toStringAsFixed(1) ?? '0.0'}',
+                    unit: weightUnit),
                 DisplayCard(
-                    title: 'Average', value: '$averageWeight', unit: ''),
+                    title: 'Average',
+                    value: '$averageWeight',
+                    unit: weightUnit),
                 DisplayCard(
                     title: 'Elapsed Time',
                     value: formatElapsedTime(stopwatch.elapsed),
                     unit: ''),
+                // DisplayCard(
+                //     title: 'Total Load (AUC)',
+                //     value: '${totalLoad.toStringAsFixed(2)}',
+                //     unit: '$weightUnit*s'),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              DateTime.now().millisecondsSinceEpoch - lastDataReceivedTime < 100000 ? 'Device Connected' : 'Device Not Connected',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: DateTime.now().millisecondsSinceEpoch - lastDataReceivedTime < 100000 ? Colors.green : Colors.red,
+              ),
             ),
           ),
           // Indicator text for recordData
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(8.0),
             child: Text(
               recordData ? 'Recording Data' : 'Not Recording Data',
               style: TextStyle(
@@ -175,7 +210,8 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding:
+                const EdgeInsets.only(bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
             child: WeightGraph(graphData: graphData),
           ),
           // Row to place buttons side by side

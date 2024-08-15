@@ -6,23 +6,59 @@ class WeightGraph extends StatelessWidget {
 
   WeightGraph({required this.graphData});
 
+  double roundToNearest10(double value) {
+    return (value / 10).round() * 10.0;
+  }
+
   @override
   Widget build(BuildContext context) {
     double minY = 0;
     double maxY = 5;
 
     if (graphData.isNotEmpty) {
-      double dataMaxY = graphData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
+      double dataMaxY =
+          graphData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
       maxY = dataMaxY > 5 ? dataMaxY : 5; // Ensure maxY is at least 5
     }
 
+    double maxX = graphData.isNotEmpty
+        ? roundToNearest10(graphData.last.x + 5)
+        : 10.0; // Ensure there's a default value that's a multiple of 10
+
+    double interval = (maxX - 0) / 10;
     return SizedBox(
       height: 200,
       child: LineChart(
         LineChartData(
-          gridData: FlGridData(show: true),
+          gridData: const FlGridData(show: true),
           borderData: FlBorderData(show: true),
-          titlesData: FlTitlesData(show: true),
+          titlesData: FlTitlesData(
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40, // Space reserved for bottom titles
+                interval: interval,
+                getTitlesWidget: (value, meta) {
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+          ),
           lineBarsData: [
             LineChartBarData(
               spots: graphData,
@@ -33,7 +69,11 @@ class WeightGraph extends StatelessWidget {
             ),
           ],
           minY: minY,
-          maxY: maxY + 5,
+          maxY: (maxY + 2.5).roundToDouble(),
+          minX: 0,
+          maxX: graphData.isNotEmpty
+              ? roundToNearest10(graphData.last.x + 5)
+              : 10.0,
         ),
       ),
     );
