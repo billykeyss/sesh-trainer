@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../utils/number.dart';
 
 class WeightGraph extends StatelessWidget {
   final List<FlSpot> graphData;
 
   WeightGraph({required this.graphData});
-
-  double roundToNearest10(double value) {
-    return (value / 10).round() * 10.0;
-  }
 
   @override
   Widget build(BuildContext context) {

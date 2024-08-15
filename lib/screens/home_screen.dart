@@ -8,6 +8,7 @@ import '../models/res_json.dart';
 import '../services/ble_service.dart';
 import '../widgets/display_card.dart';
 import '../widgets/weight_graph.dart';
+import './session_details_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class ScaleHomePage extends StatefulWidget {
@@ -125,6 +126,8 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       recordData = false;
       stopwatch.stop();
       timer?.cancel();
+      print(graphData);
+      viewDetails();
     });
   }
 
@@ -139,6 +142,49 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
         setState(() {}); // Trigger a rebuild to update the stopwatch display
       });
     });
+  }
+
+  void viewDetails() {
+if (graphData.isNotEmpty) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("Session Stopped"),
+              content:
+                  const Text("Would you like to view the session details?"),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text("Cancel"),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text("View Details"),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SessionDetailsPage(
+                          graphData: graphData,
+                          maxWeight: maxWeights[weightUnit] ?? 0.0,
+                          totalLoad: totalLoad,
+                          averageWeight: averageWeight,
+                          elapsedTimeString: formatElapsedTime(stopwatch.elapsed),
+                          elapsedTimeMs: stopwatch.elapsedMilliseconds,
+                          weightUnit: weightUnit,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
   }
 
   String formatElapsedTime(Duration duration) {
@@ -189,11 +235,18 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              DateTime.now().millisecondsSinceEpoch - lastDataReceivedTime < 100000 ? 'Device Connected' : 'Device Not Connected',
+              DateTime.now().millisecondsSinceEpoch - lastDataReceivedTime <
+                      100000
+                  ? 'Device Connected'
+                  : 'Device Not Connected',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: DateTime.now().millisecondsSinceEpoch - lastDataReceivedTime < 100000 ? Colors.green : Colors.red,
+                color: DateTime.now().millisecondsSinceEpoch -
+                            lastDataReceivedTime <
+                        100000
+                    ? Colors.green
+                    : Colors.red,
               ),
             ),
           ),
@@ -210,8 +263,8 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
             ),
           ),
           Padding(
-            padding:
-                const EdgeInsets.only(bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
+            padding: const EdgeInsets.only(
+                bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
             child: WeightGraph(graphData: graphData),
           ),
           // Row to place buttons side by side
@@ -227,8 +280,14 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                   child: const Text('Start'),
                 ),
                 ElevatedButton(
-                  onPressed: stopData,
-                  child: const Text('Stop'),
+                  onPressed: () {
+                    if (recordData) {
+                      stopData();
+                    } else {
+                      viewDetails();
+                    }
+                  },
+                  child: Text(recordData ? 'Stop' : 'View Details'),
                 ),
                 ElevatedButton(
                   onPressed: resetData,
