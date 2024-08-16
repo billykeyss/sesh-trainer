@@ -31,6 +31,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   bool recordData = false;
   int lastDataReceivedTime = 0;
   int lastUpdateTime = 0;
+  int sessionStartTime = 0;
   String weightUnit = Info.Kilogram;
   Stopwatch stopwatch = Stopwatch(); // Stopwatch to track elapsed time
   String elapsedTime = '0:00';
@@ -77,11 +78,8 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       if (recordData) {
         int currentTime = DateTime.now().millisecondsSinceEpoch;
 
-        if (currentTime - lastUpdateTime > 250) {
-          double elapsedTimeInSeconds = stopwatch.elapsedMilliseconds / 1000.0;
-          graphData.add(FlSpot(elapsedTimeInSeconds, newWeight));
-          lastUpdateTime = currentTime;
-        }
+        double elapsedTimeInSeconds = stopwatch.elapsedMilliseconds / 1000.0;
+        graphData.add(FlSpot(elapsedTimeInSeconds, newWeight));
 
         if (graphData.isNotEmpty) {
           int timeDelta = currentTime - lastUpdateTime;
@@ -102,6 +100,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                 (weightRecords.reduce((a, b) => a + b) / weightRecords.length)
                     .toStringAsFixed(1))
             : 0.0;
+        lastUpdateTime = currentTime;
       }
     });
   }
@@ -109,14 +108,13 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   void resetData() {
     setState(() {
       weight = null;
+      recordData = false;
       graphData.clear();
       weightRecords.clear();
       averageWeight = 0.0;
-      totalLoad = 0.0; // Reset total load
-      maxWeights = {
-        Info.Kilogram: 0.0,
-        Info.Pounds: 0.0
-      }; // Reset max weights map
+      totalLoad = 0.0;
+      sessionStartTime = 0;
+      maxWeights = {Info.Kilogram: 0.0, Info.Pounds: 0.0};
       stopwatch.reset();
     });
   }
@@ -135,6 +133,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     setState(() {
       recordData = true;
       stopwatch.start();
+      sessionStartTime = DateTime.now().millisecondsSinceEpoch;
       timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
         if (!recordData) {
           timer.cancel();
@@ -145,46 +144,46 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   }
 
   void viewDetails() {
-if (graphData.isNotEmpty) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text("Session Stopped"),
-              content:
-                  const Text("Would you like to view the session details?"),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text("Cancel"),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: const Text("View Details"),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SessionDetailsPage(
-                          graphData: graphData,
-                          maxWeight: maxWeights[weightUnit] ?? 0.0,
-                          totalLoad: totalLoad,
-                          averageWeight: averageWeight,
-                          elapsedTimeString: formatElapsedTime(stopwatch.elapsed),
-                          elapsedTimeMs: stopwatch.elapsedMilliseconds,
-                          weightUnit: weightUnit,
-                        ),
+    if (graphData.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Session Stopped"),
+            content: const Text("Would you like to view the session details?"),
+            actions: <Widget>[
+              TextButton(
+                child: const Text("Cancel"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text("View Details"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SessionDetailsPage(
+                        graphData: graphData,
+                        maxWeight: maxWeights[weightUnit] ?? 0.0,
+                        sessionStartTime: sessionStartTime,
+                        totalLoad: totalLoad,
+                        averageWeight: averageWeight,
+                        elapsedTimeString: formatElapsedTime(stopwatch.elapsed),
+                        elapsedTimeMs: stopwatch.elapsedMilliseconds,
+                        weightUnit: weightUnit,
                       ),
-                    );
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   String formatElapsedTime(Duration duration) {
@@ -225,10 +224,10 @@ if (graphData.isNotEmpty) {
                     title: 'Elapsed Time',
                     value: formatElapsedTime(stopwatch.elapsed),
                     unit: ''),
-                // DisplayCard(
-                //     title: 'Total Load (AUC)',
-                //     value: '${totalLoad.toStringAsFixed(2)}',
-                //     unit: '$weightUnit*s'),
+                DisplayCard(
+                    title: 'Total Load (AUC)',
+                    value: '${totalLoad.toStringAsFixed(2)}',
+                    unit: '$weightUnit*s'),
               ],
             ),
           ),
