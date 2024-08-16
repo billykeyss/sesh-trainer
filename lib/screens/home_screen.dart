@@ -9,6 +9,7 @@ import '../services/ble_service.dart';
 import '../widgets/display_card.dart';
 import '../widgets/weight_graph.dart';
 import './session_details_page.dart';
+import './saved_sessions_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class ScaleHomePage extends StatefulWidget {
@@ -196,8 +197,19 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sesh'),
-      ),
+      title: const Text('Sesh'),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.folder_open),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SavedSessionsPage()),
+            );
+          },
+        ),
+      ],
+    ),
       body: Column(
         children: [
           Flexible(
