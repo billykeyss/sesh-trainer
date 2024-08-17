@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:screenshot/screenshot.dart';
 import '../utils/number.dart';
 
 class WeightGraph extends StatelessWidget {
@@ -29,12 +30,23 @@ class WeightGraph extends StatelessWidget {
     double chartWidth = 800.0;
     double scaleFactor = chartHeight / (maxY); // Calculate pixels per unit
 
-    return SizedBox(
-      height: chartHeight,
-      width: chartWidth,
-      child: Stack(
-        children: [
-          LineChart(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0, top: 4.0), // Add bottom padding
+          child: Text(
+            'Weight vs. Time', // Graph Title
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: chartHeight,
+          width: chartWidth,
+          child: LineChart(
             LineChartData(
               gridData: const FlGridData(show: true),
               borderData: FlBorderData(show: true),
@@ -78,6 +90,10 @@ class WeightGraph extends StatelessWidget {
                 ),
                 topTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles:
+                      SideTitles(showTitles: false), // Remove right axis
                 ),
               ),
               lineBarsData: [
@@ -143,8 +159,8 @@ class WeightGraph extends StatelessWidget {
           //     ),
           //   ),
           // ),
-        ],
-      ),
+        )
+      ],
     );
   }
 }

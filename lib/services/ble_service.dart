@@ -17,8 +17,6 @@ class LeScanCallback {
       final mu = scanRecord.manufacturerData[256];
       if (mu == null) return;
 
-      print(mu);
-
       int weight = ((mu[10] & 0xff) << 8) | (mu[11] & 0xff);
       final plus = mu[12];
       if (plus != 0) {

@@ -88,7 +88,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
           // Calculate the area under the curve (AUC) using the trapezoidal rule
           double previousWeight = graphData.last.y;
           double area =
-              ((previousWeight + newWeight) * 9.81 / 2) * (timeDelta / 1000.0);
+              ((previousWeight + newWeight) / 2) * (timeDelta / 1000.0);
           totalLoad += area;
         }
 
@@ -125,7 +125,6 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       recordData = false;
       stopwatch.stop();
       timer?.cancel();
-      print(graphData);
       viewDetails();
     });
   }
@@ -200,7 +199,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       title: const Text('Sesh'),
       actions: [
         IconButton(
-          icon: Icon(Icons.folder_open),
+          icon: Icon(Icons.list_alt),
           onPressed: () {
             Navigator.push(
               context,
@@ -236,10 +235,10 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                     title: 'Elapsed Time',
                     value: formatElapsedTime(stopwatch.elapsed),
                     unit: ''),
-                DisplayCard(
-                    title: 'Total Load (AUC)',
-                    value: '${totalLoad.toStringAsFixed(2)}',
-                    unit: '$weightUnit*s'),
+                // DisplayCard(
+                //     title: 'Total Load (AUC)',
+                //     value: '${totalLoad.toStringAsFixed(2)}',
+                //     unit: '$weightUnit*s'),
               ],
             ),
           ),
