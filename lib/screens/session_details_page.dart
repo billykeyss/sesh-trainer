@@ -289,27 +289,27 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     }
   }
 
-  void _shareSessionDetails(BuildContext context) async {
-    try {
-      // Capture screenshot
-      final Uint8List? screenshot = await screenshotController.capture();
-      if (screenshot == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to capture screenshot')));
-        return;
-      }
+void _shareSessionDetails(BuildContext context) async {
+  try {
+    // Capture screenshot
+    final Uint8List? screenshot = await screenshotController.capture();
+    if (screenshot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to capture screenshot')));
+      return;
+    }
 
-      // Create a table of graphData
-      StringBuffer graphDataTable = StringBuffer();
-      graphDataTable.writeln('\n\nGraph Data:');
-      graphDataTable.writeln('Time (s)\tWeight (${widget.weightUnit})');
-      for (var spot in widget.graphData) {
-        graphDataTable.writeln(
-            '${spot.x.toStringAsFixed(2)}\t\t${spot.y.toStringAsFixed(2)}');
-      }
+    // Create a table of graphData
+    StringBuffer graphDataTable = StringBuffer();
+    graphDataTable.writeln('\n\nGraph Data:');
+    graphDataTable.writeln('Time (s)\tWeight (${widget.weightUnit})');
+    for (var spot in widget.graphData) {
+      graphDataTable.writeln(
+          '${spot.x.toStringAsFixed(2)}\t\t${spot.y.toStringAsFixed(2)}');
+    }
 
-      // Convert data to a shareable string format including the graph data
-      final String sessionData = '''
+    // Convert data to a shareable string format including the graph data
+    final String sessionData = '''
 Session Time: ${DateFormat('MMM d, yyyy, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(widget.sessionStartTime))}
 Max Pull: ${widget.maxWeight.toStringAsFixed(2)} ${widget.weightUnit}
 80% Pull: ${(widget.maxWeight * 0.8).toStringAsFixed(2)} ${widget.weightUnit}
@@ -321,21 +321,26 @@ Standard Deviation: ${calculateForceVariability(widget.graphData)}
 $graphDataTable
 ''';
 
-      // Save the screenshot to a temporary file
-      final directory = await getTemporaryDirectory();
-      final imagePath = '${directory.path}/session_screenshot.png';
-      final imageFile = File(imagePath);
-      await imageFile.writeAsBytes(screenshot);
+    // Save the screenshot to a temporary file
+    final directory = await getTemporaryDirectory();
+    final imagePath = '${directory.path}/session_screenshot.png';
+    final imageFile = File(imagePath);
+    await imageFile.writeAsBytes(screenshot);
 
-      // Share the screenshot and data
-      await Share.shareXFiles(
-        [XFile(imagePath, mimeType: 'image/png')],
-        text: sessionData,
-        subject: 'Session Details',
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sharing session details: $e')));
-    }
+    // Get the RenderBox for share position origin
+    final RenderBox box = context.findRenderObject() as RenderBox;
+
+    // Share the screenshot and data
+    await Share.shareXFiles(
+      [XFile(imagePath, mimeType: 'image/png')],
+      text: sessionData,
+      subject: 'Session Details',
+      sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sharing session details: $e')));
   }
+}
+
 }

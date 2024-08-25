@@ -116,6 +116,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       totalLoad = 0.0;
       sessionStartTime = 0;
       maxWeights = {Info.Kilogram: 0.0, Info.Pounds: 0.0};
+      stopwatch.stop();
       stopwatch.reset();
     });
   }
@@ -194,29 +195,34 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the current orientation
+    Orientation orientation = MediaQuery.of(context).orientation;
+
+    // Determine the crossAxisCount based on the orientation
+    int crossAxisCount = orientation == Orientation.portrait ? 2 : 4;
     return Scaffold(
       appBar: AppBar(
-      title: const Text('Sesh'),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.list_alt),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => SavedSessionsPage()),
-            );
-          },
-        ),
-      ],
-    ),
+        title: const Text('Sesh'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.list_alt),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SavedSessionsPage()),
+              );
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Flexible(
             flex: 8, // Adjust this flex value based on your needs
             child: GridView.count(
-              crossAxisCount: 2,
+              crossAxisCount: crossAxisCount,
               childAspectRatio: 1,
-              padding: const EdgeInsets.all(1.0),
+              padding: const EdgeInsets.all(16.0),
               children: [
                 DisplayCard(
                     title: 'Weight',

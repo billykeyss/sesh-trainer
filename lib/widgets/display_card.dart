@@ -9,22 +9,25 @@ class DisplayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center, // Center text horizontally
-        children: [
-          Text(
-            value,
-            style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center, // Center text horizontally within the Text widget
-          ),
-          Text(
-            '$title $unit',
-            style: TextStyle(fontSize: 24, color: Colors.grey),
-            textAlign: TextAlign.center, // Center text horizontally within the Text widget
-          ),
-        ],
+    return SizedBox(
+      height: 200, // Set maximum height here
+      child: Card(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              value,
+              style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              '$title $unit',
+              style: TextStyle(fontSize: 24, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
