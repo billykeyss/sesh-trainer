@@ -22,7 +22,10 @@ class $LeaderboardEntriesTable extends LeaderboardEntries
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 100),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
   static const VerificationMeta _emailMeta = const VerificationMeta('email');
   @override
   late final GeneratedColumn<String> email = GeneratedColumn<String>(
@@ -38,7 +41,10 @@ class $LeaderboardEntriesTable extends LeaderboardEntries
   @override
   late final GeneratedColumn<String> gender = GeneratedColumn<String>(
       'gender', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 10),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
   static const VerificationMeta _dateMeta = const VerificationMeta('date');
   @override
   late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(

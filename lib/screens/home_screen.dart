@@ -259,8 +259,6 @@ Please find attached the screenshot of the weight graph.
     // Determine the crossAxisCount based on the orientation
     int crossAxisCount = orientation == Orientation.portrait ? 3 : 3;
 
-    print("Inside build function");
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sesh'),

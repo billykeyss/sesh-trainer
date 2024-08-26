@@ -3,7 +3,6 @@ import 'package:drift_sqflite/drift_sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import '../models/leaderboard_entry.dart';
 
 part 'leaderboard_database.g.dart';
 
@@ -26,7 +25,7 @@ class LeaderboardDatabase extends _$LeaderboardDatabase {
   int get schemaVersion => 1;
 
   // Insert a leaderboard entry
-  Future<int> insertEntry(LeaderboardEntry entry) => into(leaderboardEntries).insert(entry);
+  Future<int> insertEntry(LeaderboardEntriesCompanion entry) => into(leaderboardEntries).insert(entry);
 
   // Get top entries
   Future<List<LeaderboardEntry>> getTopEntries(String gender, {int limit = 3}) {
