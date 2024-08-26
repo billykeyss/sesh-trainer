@@ -169,7 +169,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: WeightGraph(graphData: widget.graphData),
+                    child: WeightGraph(),
                   ),
                 ),
                 const SizedBox(height: 16.0),

@@ -1,24 +1,23 @@
+import 'package:ble_scale_app/providers/dyno_data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:screenshot/screenshot.dart';
-import '../utils/number.dart';
+import 'package:provider/provider.dart';
 
 class WeightGraph extends StatelessWidget {
-  final List<FlSpot> graphData;
-
-  WeightGraph({required this.graphData});
-
   @override
   Widget build(BuildContext context) {
+    // Access the GraphDataProvider from the context
+    final graphDataProvider = Provider.of<DynoDataProvider>(context);
+    final graphData = graphDataProvider.graphData;
+    double maxWeight = graphDataProvider.maxWeights[graphDataProvider.weightUnit] ?? 0.0;
+
     double minY = 0;
     double maxY = 5;
-    double maxWeight = maxY;
 
     if (graphData.isNotEmpty) {
       double dataMaxY =
           graphData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
       maxY = dataMaxY > 5 ? dataMaxY : 5; // Ensure maxY is at least 5
-      maxWeight = dataMaxY;
     }
 
     double maxX = graphData.isNotEmpty
@@ -34,7 +33,8 @@ class WeightGraph extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 8.0, top: 4.0), // Add bottom padding
+          padding: const EdgeInsets.only(
+              bottom: 8.0, top: 4.0), // Add bottom padding
           child: Text(
             'Weight vs. Time', // Graph Title
             style: TextStyle(
@@ -135,32 +135,12 @@ class WeightGraph extends StatelessWidget {
               maxX: maxX,
             ),
           ),
-          // Positioned(
-          //   right: 0,
-          //   top: chartHeight - (maxWeight * 0.4 * scaleFactor), // Position for 20%
-          //   child: Text(
-          //     '20%',
-          //     style: TextStyle(
-          //       color: Colors.red,
-          //       fontSize: 16,
-          //       fontWeight: FontWeight.bold,
-          //     ),
-          //   ),
-          // ),
-          // Positioned(
-          //   right: 0,
-          //   top: chartHeight - (maxWeight * 0.76 * scaleFactor), // Position for 80%
-          //   child: Text(
-          //     '80%',
-          //     style: TextStyle(
-          //       color: Colors.green,
-          //       fontSize: 16,
-          //       fontWeight: FontWeight.bold,
-          //     ),
-          //   ),
-          // ),
         )
       ],
     );
+  }
+
+  double roundToNearest10(double value) {
+    return (value / 10).ceilToDouble() * 10;
   }
 }

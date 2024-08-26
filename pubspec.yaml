@@ -38,6 +38,12 @@ dependencies:
   screenshot: 3.0.0
   path_provider: 2.1.4
   path: 1.9.0
+  sqflite: 2.3.3+1
+  flutter_email_sender: 6.0.3
+  drift: 2.20.0
+  drift_sqflite: 2.0.0
+  collection: 1.18.0
+  provider: 6.1.2
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -47,6 +53,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  drift_dev: 2.20.1
+  build_runner: 2.4.12
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

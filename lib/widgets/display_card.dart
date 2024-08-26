@@ -18,12 +18,12 @@ class DisplayCard extends StatelessWidget {
           children: [
             Text(
               value,
-              style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             Text(
               '$title $unit',
-              style: TextStyle(fontSize: 24, color: Colors.grey),
+              style: const TextStyle(fontSize: 18, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
           ],
