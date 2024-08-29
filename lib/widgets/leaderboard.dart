@@ -19,31 +19,35 @@ class Leaderboard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text(
-                    leaderboardProvider.isDaily
-                        ? 'Daily Rankings'
-                        : 'Global Rankings',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    leaderboardProvider.isDaily ? 'Daily Rankings' : 'Global Rankings',
+                    style: TextStyle(
+                      fontSize: 24, 
+                      fontWeight: FontWeight.bold, 
+                      color: Colors.blueGrey[800],
+                    ),
                   ),
                 ),
                 Spacer(),
                 ElevatedButton(
                   onPressed: () {
                     bool isDaily = !leaderboardProvider.isDaily;
-                    leaderboardProvider.fetchEntries(isDaily); // Call fetchEntries to update the state
+                    leaderboardProvider.fetchEntries(isDaily); // Update the leaderboard mode
                   },
                   child: Text(
-                    leaderboardProvider.isDaily
-                        ? 'Show Global Leaderboard'
-                        : 'Show Daily Leaderboard',
+                    leaderboardProvider.isDaily ? 'Show Global' : 'Show Daily',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
                   ),
                 ),
+                SizedBox(width: 16.0),
               ],
             ),
-            // Header for Daily/Global Rankings
-
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Row(
                   children: [
                     Expanded(
@@ -51,12 +55,8 @@ class Leaderboard extends StatelessWidget {
                         'Men',
                         leaderboardProvider.maleEntries,
                         context,
+                        Colors.blue[100],
                       ),
-                    ),
-                    Container(
-                      width: 1.0,
-                      color: Colors.grey[300], // Color of the border
-                      height: double.infinity, // Full height of the row
                     ),
                     SizedBox(width: 16.0),
                     Expanded(
@@ -64,6 +64,7 @@ class Leaderboard extends StatelessWidget {
                         'Women',
                         leaderboardProvider.femaleEntries,
                         context,
+                        Colors.pink[100],
                       ),
                     ),
                   ],
@@ -77,10 +78,26 @@ class Leaderboard extends StatelessWidget {
   }
 
   Widget _buildLeaderboardColumn(
-      String title, List<LeaderboardEntry> entries, BuildContext context) {
+    String title, 
+    List<LeaderboardEntry> entries, 
+    BuildContext context, 
+    Color? backgroundColor,
+  ) {
     final topEntries = isPreviewMode ? entries.take(3).toList() : entries;
 
     return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor, // Set the background color
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 2,
+            blurRadius: 5,
+            offset: Offset(0, 3), // Position of the shadow
+          ),
+        ],
+      ),
       padding: EdgeInsets.all(8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -90,15 +107,14 @@ class Leaderboard extends StatelessWidget {
             child: Center(
               child: Text(
                 '$title Top ${isPreviewMode ? 3 : entries.length}',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
             ),
           ),
           Expanded(
             child: ListView.separated(
               itemCount: topEntries.length,
-              separatorBuilder: (context, index) =>
-                  Divider(height: 1.0, color: Colors.grey[300]),
+              separatorBuilder: (context, index) => Divider(height: 1.0, color: Colors.grey[300]),
               itemBuilder: (context, index) {
                 final entry = topEntries[index];
                 double weightInLbs = entry.maxWeight * 2.20462;
@@ -130,7 +146,7 @@ class Leaderboard extends StatelessWidget {
                               child: Text(
                                 '${weightInLbs.toStringAsFixed(1)} lbs',
                                 style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
+                                    fontSize: 12,),
                               ),
                             ),
                           ),

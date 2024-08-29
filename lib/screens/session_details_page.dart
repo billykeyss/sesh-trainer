@@ -5,36 +5,29 @@ import 'package:intl/intl.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import '../utils/number.dart';
-import '../widgets/weight_graph.dart';
+import '../widgets/static_weight_graph.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'dart:math';
+import '../database/session_database.dart';
+import 'package:drift/drift.dart' as drift;
 
 class SessionDetailsPage extends StatefulWidget {
   final List<FlSpot> graphData;
-  final double maxWeight;
-  final int sessionStartTime;
-  final double totalLoad;
-  final double averageWeight;
-  final String elapsedTimeString;
+  final DateTime sessionStartTime;
   final int elapsedTimeMs;
   final String weightUnit;
   final String sessionName;
 
   SessionDetailsPage({
     required this.graphData,
-    required this.maxWeight,
     required this.sessionStartTime,
-    required this.totalLoad,
-    required this.averageWeight,
-    required this.elapsedTimeString,
     required this.elapsedTimeMs,
     required this.weightUnit,
-    String? sessionName,
-  }) : sessionName = sessionName ??
-            '${DateFormat('MMM d, yyyy, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(sessionStartTime))}';
+    required this.sessionName,
+  });
 
   @override
   _SessionDetailsPageState createState() => _SessionDetailsPageState();
@@ -43,38 +36,50 @@ class SessionDetailsPage extends StatefulWidget {
 class _SessionDetailsPageState extends State<SessionDetailsPage> {
   final ScreenshotController screenshotController = ScreenshotController();
   final TextEditingController _nameController = TextEditingController();
+  late final SessionDatabase _database;
 
   @override
   void initState() {
     super.initState();
+    _database = SessionDatabase();
     _nameController.text = widget.sessionName;
     _checkAndSaveSession(); // Automatically save the session on page load
   }
 
   void _checkAndSaveSession() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final filePath = '${directory.path}/${widget.sessionName}';
-    final file = File(filePath);
-
-    if (!await file.exists()) {
+    final sessionExists = await _sessionExists(widget.sessionName);
+    if (!sessionExists) {
       _saveSessionDetails(context, widget.sessionName);
     }
   }
 
-  void _renameSessionFile(BuildContext context, String newName) async {
+  Future<bool> _sessionExists(String name) async {
+    final sessions = await _database.getAllSessions();
+    return sessions.any((session) => session.name == name);
+  }
+
+  void _renameSession(BuildContext context, String newName) async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final oldFilePath = '${directory.path}/${widget.sessionName}';
-      final newFilePath = '${directory.path}/$newName';
-
-      final oldFile = File(oldFilePath);
-      final newFile = File(newFilePath);
-
-      if (await oldFile.exists()) {
-        await oldFile.rename(newFilePath); // Rename the file
+      final sessionExists = await _sessionExists(widget.sessionName);
+      if (sessionExists) {
+        final sessions = await _database.getAllSessions();
+        final session =
+            sessions.firstWhere((s) => s.name == widget.sessionName);
+        await _database.insertSession(
+          SessionsCompanion(
+            id: drift.Value(session.id),
+            name: drift.Value(newName),
+            email: drift.Value(session.email),
+            elapsedTimeMs: drift.Value(session.elapsedTimeMs),
+            weightUnit: drift.Value(session.weightUnit),
+            sessionTime: drift.Value(session.sessionTime),
+            graphData: drift.Value(session.graphData),
+            data: drift.Value(session.data),
+          ),
+        );
+        await _database.deleteSession(session.id);
       } else {
-        _saveSessionDetails(context,
-            newName); // If the file doesn't exist, save it as a new session
+        _saveSessionDetails(context, newName);
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,33 +107,39 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     }
   }
 
+  double calculateMaxWeight(List<FlSpot> graphData) {
+    return graphData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
+  }
+
+  double calculateAverageWeight(List<FlSpot> graphData) {
+    List<double> weights = graphData.map((spot) => spot.y).toList();
+    if (weights.isEmpty) return 0.0;
+    return weights.reduce((a, b) => a + b) / weights.length;
+  }
+
+  double calculateTotalLoad(List<FlSpot> graphData) {
+    return graphData.fold(0.0, (total, spot) => total + spot.y);
+  }
+
   double calculateForceVariability(List<FlSpot> graphData) {
-    // Filter out weights that are above 0
     List<double> weights =
         graphData.where((spot) => spot.y > 0).map((spot) => spot.y).toList();
-
-    if (weights.isEmpty) {
-      // Return 0 if no valid weights are available
-      return 0.0;
-    }
-
-    // Calculate mean weight
+    if (weights.isEmpty) return 0.0;
     double meanWeight = weights.reduce((a, b) => a + b) / weights.length;
-
-    // Calculate variance
     double variance = weights
             .map((weight) => (weight - meanWeight) * (weight - meanWeight))
             .reduce((a, b) => a + b) /
         weights.length;
-
-    // Calculate standard deviation
     double standardDeviation = sqrt(variance);
-
-    return standardDeviation.toPrecision(2);
+    return standardDeviation;
   }
 
   @override
   Widget build(BuildContext context) {
+    final maxWeight = calculateMaxWeight(widget.graphData);
+    final averageWeight = calculateAverageWeight(widget.graphData);
+    final totalLoad = calculateTotalLoad(widget.graphData);
+
     return Scaffold(
       appBar: AppBar(
         title: TextField(
@@ -143,7 +154,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
           ),
           onSubmitted: (newName) {
             if (newName.isNotEmpty) {
-              _renameSessionFile(context, newName); // Call rename function
+              _renameSession(context, newName); // Call rename function
             }
           },
         ),
@@ -169,7 +180,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: WeightGraph(),
+                    child: StaticWeightGraph(graphData: widget.graphData),
                   ),
                 ),
                 const SizedBox(height: 16.0),
@@ -177,39 +188,42 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                 _buildDetailCard(
                   title: 'Session Time',
                   trailing:
-                      '${DateFormat('MMM d, yyyy, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(widget.sessionStartTime))}',
+                      '${DateFormat('MMM d, yyyy, h:mm a').format(widget.sessionStartTime)}',
                 ),
                 _buildDetailCard(
                   title: 'Elapsed Time',
-                  trailing: widget.elapsedTimeString,
+                  trailing:
+                      '${formatElapsedTimeToString(widget.elapsedTimeMs)}',
                 ),
                 _buildDetailCard(
                   title: 'Max Pull',
                   trailing:
-                      '${widget.maxWeight.toStringAsFixed(2)} ${widget.weightUnit}',
+                      '${maxWeight.toStringAsFixed(2)} ${widget.weightUnit}',
                 ),
                 _buildDetailCard(
                   title: '80% Pull',
                   trailing:
-                      '${(widget.maxWeight * 0.8).toStringAsFixed(2)} ${widget.weightUnit}',
+                      '${(maxWeight * 0.8).toStringAsFixed(2)} ${widget.weightUnit}',
                 ),
                 _buildDetailCard(
                   title: '20% Pull',
                   trailing:
-                      '${(widget.maxWeight * 0.2).toStringAsFixed(2)} ${widget.weightUnit}',
+                      '${(maxWeight * 0.2).toStringAsFixed(2)} ${widget.weightUnit}',
                 ),
                 _buildDetailCard(
                   title: 'Average Pull',
-                  trailing: '${widget.averageWeight} ${widget.weightUnit}',
+                  trailing:
+                      '${averageWeight.toStringAsFixed(2)} ${widget.weightUnit}',
                 ),
                 _buildDetailCard(
                   title: 'Total Load (${widget.weightUnit}*s)',
                   trailing:
-                      '${widget.totalLoad.toStringAsFixed(2)} ${widget.weightUnit}*s',
+                      '${totalLoad.toStringAsFixed(2)} ${widget.weightUnit}*s',
                 ),
                 _buildDetailCard(
                   title: 'Standard Deviation',
-                  trailing: '${calculateForceVariability(widget.graphData)}',
+                  trailing:
+                      '${calculateForceVariability(widget.graphData).toStringAsFixed(2)}',
                 ),
               ],
             ),
@@ -226,121 +240,102 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
         borderRadius: BorderRadius.circular(10.0),
       ),
       child: ListTile(
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14.0,
+        contentPadding: EdgeInsets.all(8.0),
+        title: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 8.0), // Added horizontal padding
+          child: Text(
+            title,
+            style: TextStyle(fontSize: 18.0), // Increased font size for title
           ),
         ),
-        trailing: Text(
-          trailing,
-          style: TextStyle(
-            fontSize: 16.0,
-            color: Colors.black54,
+        trailing: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 8.0), // Added horizontal padding
+          child: Text(
+            trailing,
+            style: TextStyle(
+                fontSize: 16.0), // Increased font size for trailing text
           ),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
       ),
     );
   }
 
   void _saveSessionDetails(BuildContext context, String name) async {
     try {
-      // Create a table of graphData
-      StringBuffer graphDataTable = StringBuffer();
-      graphDataTable.writeln('\n\nGraph Data:');
-      graphDataTable.writeln('Time (s)\tWeight (${widget.weightUnit})');
-      for (var spot in widget.graphData) {
-        graphDataTable.writeln(
-            '${spot.x.toStringAsFixed(2)}\t\t${spot.y.toStringAsFixed(2)}');
-      }
-
-      // Convert data to a JSON-encoded string format including the graph data
-      final Map<String, dynamic> sessionData = {
-        'sessionTime': DateFormat('MMM d, yyyy, h:mm a').format(
-            DateTime.fromMillisecondsSinceEpoch(widget.sessionStartTime)),
-        'sessionTimeEpochMs': widget.sessionStartTime,
-        'maxPull': widget.maxWeight.toStringAsFixed(2),
-        '80Pull': (widget.maxWeight * 0.8).toStringAsFixed(2),
-        '20Pull': (widget.maxWeight * 0.2).toStringAsFixed(2),
-        'averagePull': widget.averageWeight,
-        'totalLoad': widget.totalLoad.toStringAsFixed(2),
-        'elapsedTime': widget.elapsedTimeString,
-        'elapsedTimeMs': widget.elapsedTimeMs,
-        'weightUnit': widget.weightUnit,
-        'graphData':
-            widget.graphData.map((spot) => {'x': spot.x, 'y': spot.y}).toList(),
-      };
-
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/$name';
-      final file = File(filePath);
-      await file.writeAsString(jsonEncode(sessionData));
+      final newSession = SessionsCompanion(
+        name: drift.Value(name),
+        email: drift.Value(''), // Provide default or empty value
+        elapsedTimeMs: drift.Value(widget.elapsedTimeMs),
+        weightUnit: drift.Value(widget.weightUnit),
+        sessionTime: drift.Value(widget.sessionStartTime),
+        graphData: drift.Value(jsonEncode(widget.graphData
+            .map((spot) => {'x': spot.x, 'y': spot.y})
+            .toList())),
+        data: drift.Value(''),
+      );
+      await _database.insertSession(newSession);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Session saved as "$name" successfully!')),
+        SnackBar(
+          content: GestureDetector(
+            onTap: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+            child: Text('Session "$name" saved successfully!'),
+          ),
+          duration: Duration(seconds: 3),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving session details: $e')),
+        SnackBar(
+          content: GestureDetector(
+            onTap: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+            child: Text('Error saving session: $e'),
+          ),
+        ),
       );
     }
   }
 
-void _shareSessionDetails(BuildContext context) async {
-  try {
-    // Capture screenshot
-    final Uint8List? screenshot = await screenshotController.capture();
-    if (screenshot == null) {
+  void _shareSessionDetails(BuildContext context) async {
+    try {
+      final Uint8List? screenshot = await screenshotController.capture();
+      if (screenshot == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+              child: Text('Failed to capture screenshot.'),
+            ),
+          ),
+        );
+        return;
+      }
+
+      final directory = await Directory.systemTemp.createTemp();
+      final imagePath = '${directory.path}/screenshot.png';
+      final imageFile = File(imagePath);
+      await imageFile.writeAsBytes(screenshot);
+
+      await Share.shareXFiles([XFile(imagePath)]);
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to capture screenshot')));
-      return;
+        SnackBar(
+          content: GestureDetector(
+            onTap: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+            child: Text('Error sharing session: $e'),
+          ),
+        ),
+      );
     }
-
-    // Create a table of graphData
-    StringBuffer graphDataTable = StringBuffer();
-    graphDataTable.writeln('\n\nGraph Data:');
-    graphDataTable.writeln('Time (s)\tWeight (${widget.weightUnit})');
-    for (var spot in widget.graphData) {
-      graphDataTable.writeln(
-          '${spot.x.toStringAsFixed(2)}\t\t${spot.y.toStringAsFixed(2)}');
-    }
-
-    // Convert data to a shareable string format including the graph data
-    final String sessionData = '''
-Session Time: ${DateFormat('MMM d, yyyy, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(widget.sessionStartTime))}
-Max Pull: ${widget.maxWeight.toStringAsFixed(2)} ${widget.weightUnit}
-80% Pull: ${(widget.maxWeight * 0.8).toStringAsFixed(2)} ${widget.weightUnit}
-20% Pull: ${(widget.maxWeight * 0.2).toStringAsFixed(2)} ${widget.weightUnit}
-Average Pull: ${widget.averageWeight} ${widget.weightUnit}
-Total Load: ${widget.totalLoad.toStringAsFixed(2)} ${widget.weightUnit}*s
-Elapsed Time: ${widget.elapsedTimeString}
-Standard Deviation: ${calculateForceVariability(widget.graphData)}
-$graphDataTable
-''';
-
-    // Save the screenshot to a temporary file
-    final directory = await getTemporaryDirectory();
-    final imagePath = '${directory.path}/session_screenshot.png';
-    final imageFile = File(imagePath);
-    await imageFile.writeAsBytes(screenshot);
-
-    // Get the RenderBox for share position origin
-    final RenderBox box = context.findRenderObject() as RenderBox;
-
-    // Share the screenshot and data
-    await Share.shareXFiles(
-      [XFile(imagePath, mimeType: 'image/png')],
-      text: sessionData,
-      subject: 'Session Details',
-      sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sharing session details: $e')));
   }
-}
-
 }

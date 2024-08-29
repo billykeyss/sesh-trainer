@@ -9,18 +9,18 @@ class Info {
   final int weight;
   final int unit;
   final String name;
-  final BluetoothDevice device;
+  final BluetoothDevice? device; // Made optional by adding a `?`
 
   Info({
     required this.weight,
     required this.unit,
     required this.name,
-    required this.device,
+    this.device, // Optional field
   });
 
   @override
   String toString() {
-    return 'Info(weight: $weight, unit: $unit, name: $name, device: ${device.id})';
+    return 'Info(weight: $weight, unit: $unit, name: $name, device: ${device?.id ?? "No device"})';
   }
 
   String getUnitString() {

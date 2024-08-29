@@ -12,6 +12,7 @@ class LeaderboardService {
   }
 
   LeaderboardService._internal() {
+    print("Initializing LeaderboardService");
     _database = db.LeaderboardDatabase();
   }
 

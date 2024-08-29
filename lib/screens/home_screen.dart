@@ -7,6 +7,7 @@ import 'package:flutter_blue/flutter_blue.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import '../models/leaderboard_entry.dart';
+import '../models/info.dart';
 import '../providers/leaderboard_provider.dart';
 import '../services/leaderboard_service.dart';
 import '../widgets/leaderboard.dart';
@@ -18,6 +19,8 @@ import '../utils/number.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
+import 'dart:math';
+import '../utils/email_utils.dart';
 
 class ScaleHomePage extends StatefulWidget {
   @override
@@ -28,6 +31,9 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   BluetoothDevice? connectedDevice;
   String elapsedTime = '0:00';
+  bool showTestButton = true; // Feature gate for the test button
+  bool showLeaderboard = true; // Feature flag for the leaderboard
+
   Leaderboard leaderboard = Leaderboard(isPreviewMode: true);
 
   @override
@@ -39,7 +45,10 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     requestPermissions();
     Future.delayed(const Duration(seconds: 2), scanForDevices);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchLeaderboardData();
+      if (showLeaderboard) {
+        // Only fetch data if leaderboard is enabled
+        _fetchLeaderboardData();
+      }
     });
   }
 
@@ -76,41 +85,24 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   }
 
   void viewDetails() {
-    if (Provider.of<DynoDataProvider>(context, listen: false)
-        .graphData
-        .isNotEmpty) {
-      // Show option to add to leaderboard
+    final dynoDataProvider =
+        Provider.of<DynoDataProvider>(context, listen: false);
+
+    if (dynoDataProvider.graphData.isNotEmpty) {
       Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SessionDetailsPage(
-              graphData: Provider.of<DynoDataProvider>(context, listen: false)
-                  .graphData,
-              maxWeight: Provider.of<DynoDataProvider>(context, listen: false)
-                          .maxWeights[
-                      Provider.of<DynoDataProvider>(context, listen: false)
-                          .weightUnit] ??
-                  0.0,
-              sessionStartTime:
-                  Provider.of<DynoDataProvider>(context, listen: false)
-                      .sessionStartTime,
-              totalLoad: Provider.of<DynoDataProvider>(context, listen: false)
-                  .totalLoad,
-              averageWeight:
-                  Provider.of<DynoDataProvider>(context, listen: false)
-                      .averageWeight,
-              elapsedTimeString: formatElapsedTime(
-                  Provider.of<DynoDataProvider>(context, listen: false)
-                      .stopwatch
-                      .elapsed),
-              elapsedTimeMs:
-                  Provider.of<DynoDataProvider>(context, listen: false)
-                      .stopwatch
-                      .elapsedMilliseconds,
-              weightUnit: Provider.of<DynoDataProvider>(context, listen: false)
-                  .weightUnit,
-            ),
-          ));
+        context,
+        MaterialPageRoute(
+          builder: (context) => SessionDetailsPage(
+            graphData: dynoDataProvider.graphData,
+            sessionStartTime: DateTime.fromMillisecondsSinceEpoch(
+                dynoDataProvider.sessionStartTime),
+            elapsedTimeMs: dynoDataProvider.stopwatch.elapsedMilliseconds,
+            weightUnit: dynoDataProvider.weightUnit,
+            sessionName:
+                'Session ${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}', // Example session name
+          ),
+        ),
+      );
     }
   }
 
@@ -120,143 +112,149 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     String gender = 'Male';
 
     final _formKey = GlobalKey<FormState>();
+    final dynoDataProvider =
+        Provider.of<DynoDataProvider>(context, listen: false);
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Add to Leaderboard"),
-          content: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+    if (dynoDataProvider.graphData.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Add to Leaderboard"),
+            content: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                    ),
+                    onChanged: (value) {
+                      name = value;
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your name';
+                      }
+                      return null;
+                    },
                   ),
-                  onChanged: (value) {
-                    name = value;
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 8.0),
-                TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Email (optional)',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                  const SizedBox(height: 8.0),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Email (optional)',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                    ),
+                    onChanged: (value) {
+                      email = value;
+                    },
                   ),
-                  onChanged: (value) {
-                    email = value;
-                  },
-                ),
-                const SizedBox(height: 8.0),
-                GenderToggle(
-                  initialGender: gender,
-                  onGenderChanged: (selectedGender) {
-                    gender = selectedGender;
-                  },
-                ),
-              ],
+                  const SizedBox(height: 8.0),
+                  GenderToggle(
+                    initialGender: gender,
+                    onGenderChanged: (selectedGender) {
+                      gender = selectedGender;
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text("Cancel"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text("Add"),
-              onPressed: () async {
-                if (_formKey.currentState!.validate()) {
-                  // Add entry to the leaderboard
-                  LeaderboardService().addEntry(LeaderboardEntry(
-                    name: name,
-                    email: email,
-                    maxWeight: Provider.of<DynoDataProvider>(context,
-                                listen: false)
-                            .maxWeights[
-                        Provider.of<DynoDataProvider>(context, listen: false)
-                            .weightUnit]!,
-                    gender: gender,
-                    date: DateTime.now(),
-                  ));
-
-                  // If email is provided, send the summary
-                  if (email.isNotEmpty) {
-                    await _sendEmailSummary(name, email);
-                  }
-
+            actions: <Widget>[
+              TextButton(
+                child: const Text("Cancel"),
+                onPressed: () {
                   Navigator.of(context).pop();
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
+                },
+              ),
+              TextButton(
+                child: const Text("Add"),
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    final sessionStartTime =
+                        DateTime.fromMillisecondsSinceEpoch(
+                            dynoDataProvider.sessionStartTime);
+                    final graphData = dynoDataProvider.graphData
+                        .map((spot) => {'x': spot.x, 'y': spot.y})
+                        .toList();
+                    final maxWeight = dynoDataProvider
+                            .maxWeights[dynoDataProvider.weightUnit] ??
+                        0.0;
+                    final weightUnit = dynoDataProvider.weightUnit;
+                    final elapsedTime =
+                        dynoDataProvider.stopwatch.elapsed.toString();
+                    final averageWeight = dynoDataProvider.averageWeight;
+                    final totalLoad = dynoDataProvider.totalLoad;
+
+                    // Add entry to the leaderboard
+                    LeaderboardService().addEntry(LeaderboardEntry(
+                      name: name,
+                      email: email,
+                      maxWeight: maxWeight,
+                      gender: gender,
+                      date: DateTime.now(),
+                    ));
+
+                    // Send the email if an email address was provided
+                    if (email.isNotEmpty) {
+                      await sendEmailSummary(
+                        name,
+                        email,
+                        sessionStartTime,
+                        graphData,
+                        maxWeight,
+                        weightUnit,
+                        elapsedTime,
+                        averageWeight,
+                        totalLoad,
+                      );
+                    }
+
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
-  Future<void> _sendEmailSummary(String name, String email) async {
-    // Create a table of graphData
-    StringBuffer graphDataTable = StringBuffer();
-    graphDataTable.writeln('\n\nGraph Data:');
-    graphDataTable.writeln(
-        'Time (s)\tWeight (${Provider.of<DynoDataProvider>(context, listen: false).weightUnit})');
-    for (var spot
-        in Provider.of<DynoDataProvider>(context, listen: false).graphData) {
-      graphDataTable.writeln(
-          '${spot.x.toStringAsFixed(2)}\t\t${spot.y.toStringAsFixed(2)}');
-    }
-    int maxWeight = Provider.of<DynoDataProvider>(context, listen: false)
-        .maxWeights[
-            Provider.of<DynoDataProvider>(context, listen: false).weightUnit]!
-        .toInt();
-    final String sessionData = '''
-Session Time: ${DateFormat('MMM d, yyyy, h:mm a').format(DateTime.fromMillisecondsSinceEpoch(Provider.of<DynoDataProvider>(context, listen: false).sessionStartTime))}
-Max Pull: ${maxWeight.toStringAsFixed(2)} ${Provider.of<DynoDataProvider>(context, listen: false).weightUnit}
-80% Pull: ${(maxWeight * 0.8).toStringAsFixed(2)} ${Provider.of<DynoDataProvider>(context, listen: false).weightUnit}
-20% Pull: ${(maxWeight * 0.2).toStringAsFixed(2)} ${Provider.of<DynoDataProvider>(context, listen: false).weightUnit}
-Elapsed Time: ${elapsedTime}
-$graphDataTable
-''';
+  void _runTestSession() {
+    final dynoDataProvider =
+        Provider.of<DynoDataProvider>(context, listen: false);
 
-    // Capture screenshot of the graph
-    final Email emailToSend = Email(
-      body: '''
-Name: $name
-Max Weight: ${Provider.of<DynoDataProvider>(context, listen: false).maxWeights[Provider.of<DynoDataProvider>(context, listen: false).weightUnit]!}
-Elapsed Time: ${formatElapsedTime(Provider.of<DynoDataProvider>(context, listen: false).stopwatch.elapsed)}
-Average Weight: ${Provider.of<DynoDataProvider>(context, listen: false).averageWeight.toStringAsFixed(1)}
-Total Load: ${Provider.of<DynoDataProvider>(context, listen: false).totalLoad.toStringAsFixed(1)}
+    dynoDataProvider.resetData();
+    dynoDataProvider.startData();
 
-Please find attached the screenshot of the weight graph.
-''',
-      subject: 'Leaderboard Entry Summary',
-      recipients: [email],
-    );
-
-    await FlutterEmailSender.send(emailToSend);
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (timer.tick <= 5) {
+        double randomWeight = 50 + Random().nextDouble() * 100;
+        Info testInfo = Info(
+          weight: randomWeight.toInt(),
+          unit:
+              Info.WEIGHT_KGS, // Use either Info.WEIGHT_KGS or Info.WEIGHT_LBS
+          name: 'Test',
+          device: null,
+        );
+        dynoDataProvider.updateGraphData(testInfo);
+      } else {
+        dynoDataProvider.stopData();
+        timer.cancel();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the current orientation
     Orientation orientation = MediaQuery.of(context).orientation;
 
-    // Determine the crossAxisCount based on the orientation
     int crossAxisCount = orientation == Orientation.portrait ? 3 : 3;
 
     return Scaffold(
@@ -274,24 +272,32 @@ Please find attached the screenshot of the weight graph.
                   );
                   break;
                 case 'Leaderboard':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => LeaderboardPage()),
-                  );
+                  if (showLeaderboard) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => LeaderboardPage()),
+                    );
+                  }
                   break;
               }
             },
             itemBuilder: (BuildContext context) {
-              return [
+              List<PopupMenuEntry<String>> menuItems = [
                 PopupMenuItem<String>(
                   value: 'Session Details',
                   child: Text('Session Details view'),
                 ),
-                PopupMenuItem<String>(
-                  value: 'Leaderboard',
-                  child: Text('Leaderboard view'),
-                ),
               ];
+              if (showLeaderboard) {
+                menuItems.add(
+                  PopupMenuItem<String>(
+                    value: 'Leaderboard',
+                    child: Text('Leaderboard view'),
+                  ),
+                );
+              }
+              return menuItems;
             },
           ),
         ],
@@ -299,52 +305,95 @@ Please find attached the screenshot of the weight graph.
       body: Column(
         children: [
           if (orientation == Orientation.landscape) ...[
-            // Row for Leaderboard and Display Cards in Portrait Mode
             Flexible(
               flex: 6,
               child: Row(
                 children: [
                   DynoDataDisplay(crossAxisCount: crossAxisCount),
-                  Expanded(
-                    flex: 3,
-                    child: FutureBuilder(
-                      future: _fetchLeaderboardData(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return Center(child: CircularProgressIndicator());
-                        } else if (snapshot.hasError) {
-                          return Center(
-                              child: Text('Error: ${snapshot.error}'));
-                        } else {
-                          return leaderboard;
-                        }
-                      },
+                  if (showLeaderboard)
+                    Expanded(
+                      flex: 3,
+                      child: FutureBuilder(
+                        future: _fetchLeaderboardData(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Center(child: CircularProgressIndicator());
+                          } else if (snapshot.hasError) {
+                            return Center(
+                                child: Text('Error: ${snapshot.error}'));
+                          } else {
+                            return leaderboard;
+                          }
+                        },
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
           ] else ...[
-            // Vertical Layout for Landscape Mode
-            Flexible(
-              flex: 3,
-              child: FutureBuilder(
-                future: _fetchLeaderboardData(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else {
-                    return Leaderboard(isPreviewMode: true);
-                  }
-                },
+            if (showLeaderboard)
+              Flexible(
+                flex: 4,
+                child: FutureBuilder(
+                  future: _fetchLeaderboardData(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    } else {
+                      return Leaderboard(isPreviewMode: true);
+                    }
+                  },
+                ),
               ),
-            ),
             DynoDataDisplay(crossAxisCount: crossAxisCount),
           ],
           StatusIconBar(),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: startData,
+                  child: const Text('Start'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    stopData();
+                  },
+                  child: const Text('Stop'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: resetData,
+                  child: const Text('Reset'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
+                  ),
+                ),
+                if (showTestButton) // Feature gate for the test button
+                  ElevatedButton(
+                    onPressed: _runTestSession,
+                    child: const Text('Test'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 10),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(
                 bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
@@ -356,49 +405,24 @@ Please find attached the screenshot of the weight graph.
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: startData,
-                  child: const Text('Start'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 10), // Adjust padding
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    stopData();
-                  },
-                  child: const Text('Stop'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 10), // Adjust padding
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: resetData,
-                  child: const Text('Reset'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 10), // Adjust padding
-                  ),
-                ),
-                ElevatedButton(
                   onPressed: viewDetails,
                   child: const Text('View Details'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 10), // Adjust padding
+                        horizontal: 10, vertical: 10),
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    _addToLeaderboard(context);
-                  },
-                  child: const Text('Add to Leaderboard'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 10), // Adjust padding
+                if (showLeaderboard)
+                  ElevatedButton(
+                    onPressed: () {
+                      _addToLeaderboard(context);
+                    },
+                    child: const Text('Add to Leaderboard'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 10),
+                    ),
                   ),
-                ),
               ],
             ),
           ),

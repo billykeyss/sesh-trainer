@@ -1,11 +1,10 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import './session_details_page.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart' as path;
+import '../database/session_database.dart';
+import 'package:drift/drift.dart' as drift;
+import 'session_details_page.dart';
+import 'dart:convert';
 
 class SavedSessionsPage extends StatefulWidget {
   @override
@@ -13,69 +12,55 @@ class SavedSessionsPage extends StatefulWidget {
 }
 
 class _SavedSessionsPageState extends State<SavedSessionsPage> {
-  List<File> savedSessions = [];
+  late final SessionDatabase _database;
+  List<Session> savedSessions = [];
 
   @override
   void initState() {
     super.initState();
-    _loadSavedSessions();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+    _database = SessionDatabase();
     _loadSavedSessions();
   }
 
   void _loadSavedSessions() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final sessionFiles = directory.listSync().toList();
-
+    final sessions = await _database.getAllSessions();
     setState(() {
-      savedSessions = sessionFiles.map((file) => File(file.path)).toList();
+      savedSessions = sessions;
     });
   }
 
-  void _viewSessionDetails(File file) async {
-    final sessionData = jsonDecode(await file.readAsString());
+  void _viewSessionDetails(Session session) {
+    final List<FlSpot> graphData = (jsonDecode(session.graphData) as List)
+        .map((item) => FlSpot(item['x'], item['y']))
+        .toList();
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SessionDetailsPage(
-          graphData: (sessionData['graphData'] as List)
-              .map((item) => FlSpot(item['x'], item['y']))
-              .toList(),
-          maxWeight: double.parse(sessionData['maxPull']),
-          sessionStartTime:
-              sessionData['sessionTimeEpochMs'], // Ensure this is a String
-          totalLoad: double.parse(sessionData['totalLoad']),
-          averageWeight: sessionData['averagePull'],
-          elapsedTimeString: sessionData['elapsedTime'].toString(),
-          elapsedTimeMs: sessionData['elapsedTimeMs'],
-          weightUnit: sessionData[
-              'weightUnit'], // Assuming all are in kg, update as necessary
-          sessionName: path.basename(file.path),
+          graphData: graphData,
+          sessionStartTime: session.sessionTime,
+          elapsedTimeMs: session.elapsedTimeMs,
+          weightUnit: session.weightUnit,
+          sessionName: session.name,
         ),
       ),
     );
   }
 
-  void _deleteSession(File file) async {
+  void _deleteSession(Session session) async {
     bool confirmed = await _showDeleteConfirmationDialog();
     if (confirmed) {
-      await file.delete();
-      setState(() {
-        savedSessions.remove(file);
-      });
+      await _database.deleteSession(session.id);
+      _loadSavedSessions();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Session deleted')),
       );
     }
   }
 
-  void _renameSession(File file) async {
-    final currentName = file.path.split('/').last.split('.').first;
-    final newNameController = TextEditingController(text: currentName);
+  void _renameSession(Session session) async {
+    final newNameController = TextEditingController(text: session.name);
 
     showDialog(
       context: context,
@@ -97,11 +82,9 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
               onPressed: () async {
                 final newName = newNameController.text;
                 if (newName.isNotEmpty) {
-                  final directory = await getApplicationDocumentsDirectory();
-                  final newFile = File('${directory.path}/$newName');
-                  await file.copy(newFile.path);
-                  await file.delete();
-
+                  await _database.updateSession(
+                    session.copyWith(name: newName),
+                  );
                   _loadSavedSessions();
                 }
                 Navigator.of(context).pop();
@@ -167,7 +150,7 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
           : ListView.builder(
               itemCount: savedSessions.length,
               itemBuilder: (context, index) {
-                final file = savedSessions[index];
+                final session = savedSessions[index];
                 return Container(
                   margin: const EdgeInsets.symmetric(
                       vertical: 8.0, horizontal: 16.0),
@@ -190,7 +173,7 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
                       padding: const EdgeInsets.only(
                           left: 16.0), // Add padding to the left of the title
                       child: Text(
-                        file.path.split('/').last,
+                        session.name,
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -199,19 +182,19 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
                           left:
                               16.0), // Add padding to the left of the subtitle
                       child: Text(
-                          'Last modified: ${DateFormat('MMM d, yyyy').format(file.lastModifiedSync())}'),
+                          'Last modified: ${DateFormat('MMM d, yyyy').format(session.sessionTime)}'),
                     ),
-                    onTap: () => _viewSessionDetails(file),
+                    onTap: () => _viewSessionDetails(session),
                     trailing: Wrap(
                       spacing: 0, // Space between two icons
                       children: <Widget>[
                         IconButton(
                           icon: Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _renameSession(file),
+                          onPressed: () => _renameSession(session),
                         ),
                         IconButton(
                           icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteSession(file),
+                          onPressed: () => _deleteSession(session),
                         ),
                       ],
                     ),

@@ -11,10 +11,7 @@ class DynoDataProvider with ChangeNotifier {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   BluetoothDevice? connectedDevice;
   double? weight;
-  Map<String, double> maxWeights = {
-    Info.Kilogram: 0.0,
-    Info.Pounds: 0.0
-  };
+  Map<String, double> maxWeights = {Info.Kilogram: 0.0, Info.Pounds: 0.0};
   double averageWeight = 0.0;
   double _totalLoad = 0.0;
   List<FlSpot> graphData = [];
@@ -37,26 +34,19 @@ class DynoDataProvider with ChangeNotifier {
   void scanForDevices() {
     startScan((res) {
       if (res.code == 1) {
-        lastDataReceivedTime = DateTime.now().millisecondsSinceEpoch;
-        weight = max(res.data.weight / -100.0, 0.0);
-        weightUnit = res.data.getUnitString();
-        if (recordData) {
-          connectedDevice = res.data.device;
-          updateGraphData(weight!);
-
-          if (weightUnit == Info.Kilogram || weightUnit == Info.Pounds) {
-            maxWeights[weightUnit] = max(
-                maxWeights[weightUnit]!, weight ?? maxWeights[weightUnit]!);
-          }
-        }
-        notifyListeners();
+        updateGraphData(res.data);
       } else {
         print('Scan failed: ${res.msg}');
       }
     });
   }
 
-  void updateGraphData(double newWeight) {
+  void updateGraphData(Info data) {
+    lastDataReceivedTime = DateTime.now().millisecondsSinceEpoch;
+    connectedDevice = data.device;
+    double newWeight = data.weight.toDouble();
+    weight = newWeight;
+    weightUnit = data.getUnitString();
     if (recordData) {
       int currentTime = DateTime.now().millisecondsSinceEpoch;
       double elapsedTimeInSeconds = stopwatch.elapsedMilliseconds / 1000.0;
@@ -65,13 +55,17 @@ class DynoDataProvider with ChangeNotifier {
       if (graphData.isNotEmpty) {
         int timeDelta = currentTime - lastUpdateTime;
         double previousWeight = graphData.last.y;
-        double area =
-            ((previousWeight + newWeight) / 2) * (timeDelta / 1000.0);
+        double area = ((previousWeight + newWeight) / 2) * (timeDelta / 1000.0);
         _totalLoad += area;
       }
 
       if (newWeight > 0) {
         weightRecords.add(newWeight);
+      }
+
+      if (weightUnit == Info.Kilogram || weightUnit == Info.Pounds) {
+        maxWeights[weightUnit] =
+            max(maxWeights[weightUnit]!, weight ?? maxWeights[weightUnit]!);
       }
 
       averageWeight = weightRecords.isNotEmpty
@@ -80,8 +74,8 @@ class DynoDataProvider with ChangeNotifier {
                   .toStringAsFixed(1))
           : 0.0;
       lastUpdateTime = currentTime;
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   void resetData() {
