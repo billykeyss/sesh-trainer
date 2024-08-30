@@ -3,6 +3,7 @@ import 'package:ble_scale_app/widgets/weight_graph.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import '../utils/number.dart';
@@ -11,7 +12,10 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:math';
 import '../database/session_database.dart';
+import '../models/info.dart';
 import 'package:drift/drift.dart' as drift;
+import '../providers/theme_provider.dart';
+import 'package:ble_scale_app/utils/number.dart';
 
 class SessionDetailsPage extends StatefulWidget {
   final List<FlSpot> graphData;
@@ -125,133 +129,150 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     final isDarkMode = theme.brightness == Brightness.dark;
     final textColor = isDarkMode ? Colors.white : Colors.black;
     final backgroundColor = isDarkMode ? Colors.grey[850] : Colors.white;
-    final Color cardColor = isDarkMode ? Colors.grey[800] ?? Colors.grey  : Colors.white;
+    final Color cardColor = isDarkMode ? Colors.grey[800] ?? Colors.grey : Colors.white;
     final shadowColor = isDarkMode ? Colors.black.withOpacity(0.1) : Colors.black.withOpacity(0.2);
 
-    final maxWeight = calculateMaxWeight(widget.graphData);
-    final averageWeight = calculateAverageWeight(widget.graphData);
-    final totalLoad = calculateTotalLoad(widget.graphData);
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        String selectedUnit = themeProvider.unit;
+        // Convert graph data to selected unit if necessary
+        List<FlSpot> convertedGraphData = widget.graphData.map((spot) {
+          double yValue = spot.y;
+          if (selectedUnit == Info.Pounds && widget.weightUnit == Info.Kilogram) {
+            yValue = convertKgToLbs(yValue);
+          } else if (selectedUnit == Info.Kilogram && widget.weightUnit == Info.Pounds) {
+            yValue = convertLbsToKg(yValue);
+          }
+          return FlSpot(spot.x, yValue);
+        }).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
+        final maxWeight = calculateMaxWeight(convertedGraphData);
+        final averageWeight = calculateAverageWeight(convertedGraphData);
+        final totalLoad = calculateTotalLoad(convertedGraphData);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+              ),
+              style: TextStyle(
+                color: textColor, // Dynamic text color
+                fontSize: 20.0,
+                fontWeight: FontWeight.bold,
+              ),
+              onSubmitted: (newName) {
+                if (newName.isNotEmpty) {
+                  _renameSession(context, newName); // Call rename function
+                }
+              },
+            ),
+            backgroundColor: theme.appBarTheme.backgroundColor, // Adjust for dark mode
+            actions: [
+              IconButton(
+                icon: Icon(Icons.share, color: textColor),
+                onPressed: () => _shareSessionDetails(context),
+              ),
+            ],
           ),
-          style: TextStyle(
-            color: textColor, // Dynamic text color
-            fontSize: 20.0,
-            fontWeight: FontWeight.bold,
-          ),
-          onSubmitted: (newName) {
-            if (newName.isNotEmpty) {
-              _renameSession(context, newName); // Call rename function
-            }
-          },
-        ),
-        backgroundColor: theme.appBarTheme.backgroundColor, // Adjust for dark mode
-        actions: [
-          IconButton(
-            icon: Icon(Icons.share, color: textColor),
-            onPressed: () => _shareSessionDetails(context),
-          ),
-        ],
-      ),
-      body: Screenshot(
-        controller: screenshotController,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Graph Widget
-                Card(
-                  color: cardColor, // Adjust card color for dark mode
-                  elevation: 4.0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  shadowColor: shadowColor, // Adjust shadow color for dark mode
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: WeightGraph(
-                        graphData: widget.graphData,
-                        weightUnit: widget.weightUnit),
-                  ),
+          body: Screenshot(
+            controller: screenshotController,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    // Graph Widget
+                    Card(
+                      color: cardColor, // Adjust card color for dark mode
+                      elevation: 4.0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      shadowColor: shadowColor, // Adjust shadow color for dark mode
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: WeightGraph(
+                          graphData: convertedGraphData,
+                          weightUnit: selectedUnit,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16.0),
+                    // ListTiles with enhanced UI
+                    _buildDetailCard(
+                      title: 'Session Time',
+                      trailing:
+                          '${DateFormat('MMM d, yyyy, h:mm a').format(widget.sessionStartTime)}',
+                      textColor: textColor,
+                      cardColor: cardColor,
+                      shadowColor: shadowColor,
+                    ),
+                    _buildDetailCard(
+                      title: 'Elapsed Time',
+                      trailing:
+                          '${formatElapsedTimeIntToString(widget.elapsedTimeMs)}',
+                      textColor: textColor,
+                      cardColor: cardColor,
+                      shadowColor: shadowColor,
+                    ),
+                    _buildDetailCard(
+                      title: 'Max Pull',
+                      trailing:
+                          '${maxWeight.toStringAsFixed(2)} $selectedUnit',
+                      textColor: textColor,
+                      cardColor: cardColor,
+                      shadowColor: shadowColor,
+                    ),
+                    _buildDetailCard(
+                      title: '80% Pull',
+                      trailing:
+                          '${(maxWeight * 0.8).toStringAsFixed(2)} $selectedUnit',
+                      textColor: textColor,
+                      cardColor: cardColor,
+                      shadowColor: shadowColor,
+                    ),
+                    _buildDetailCard(
+                      title: '20% Pull',
+                      trailing:
+                          '${(maxWeight * 0.2).toStringAsFixed(2)} $selectedUnit',
+                      textColor: textColor,
+                      cardColor: cardColor,
+                      shadowColor: shadowColor,
+                    ),
+                    _buildDetailCard(
+                      title: 'Average Pull',
+                      trailing:
+                          '${averageWeight.toStringAsFixed(2)} $selectedUnit',
+                      textColor: textColor,
+                      cardColor: cardColor,
+                      shadowColor: shadowColor,
+                    ),
+                    _buildDetailCard(
+                      title: 'Total Load (${selectedUnit}*s)',
+                      trailing:
+                          '${totalLoad.toStringAsFixed(2)} ${selectedUnit}*s',
+                      textColor: textColor,
+                      cardColor: cardColor,
+                      shadowColor: shadowColor,
+                    ),
+                    _buildDetailCard(
+                      title: 'Standard Deviation',
+                      trailing:
+                          '${calculateForceVariability(convertedGraphData).toStringAsFixed(2)}',
+                      textColor: textColor,
+                      cardColor: cardColor,
+                      shadowColor: shadowColor,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16.0),
-                // ListTiles with enhanced UI
-                _buildDetailCard(
-                  title: 'Session Time',
-                  trailing:
-                      '${DateFormat('MMM d, yyyy, h:mm a').format(widget.sessionStartTime)}',
-                  textColor: textColor,
-                  cardColor: cardColor,
-                  shadowColor: shadowColor,
-                ),
-                _buildDetailCard(
-                  title: 'Elapsed Time',
-                  trailing:
-                      '${formatElapsedTimeIntToString(widget.elapsedTimeMs)}',
-                  textColor: textColor,
-                  cardColor: cardColor,
-                  shadowColor: shadowColor,
-                ),
-                _buildDetailCard(
-                  title: 'Max Pull',
-                  trailing:
-                      '${maxWeight.toStringAsFixed(2)} ${widget.weightUnit}',
-                  textColor: textColor,
-                  cardColor: cardColor,
-                  shadowColor: shadowColor,
-                ),
-                _buildDetailCard(
-                  title: '80% Pull',
-                  trailing:
-                      '${(maxWeight * 0.8).toStringAsFixed(2)} ${widget.weightUnit}',
-                  textColor: textColor,
-                  cardColor: cardColor,
-                  shadowColor: shadowColor,
-                ),
-                _buildDetailCard(
-                  title: '20% Pull',
-                  trailing:
-                      '${(maxWeight * 0.2).toStringAsFixed(2)} ${widget.weightUnit}',
-                  textColor: textColor,
-                  cardColor: cardColor,
-                  shadowColor: shadowColor,
-                ),
-                _buildDetailCard(
-                  title: 'Average Pull',
-                  trailing:
-                      '${averageWeight.toStringAsFixed(2)} ${widget.weightUnit}',
-                  textColor: textColor,
-                  cardColor: cardColor,
-                  shadowColor: shadowColor,
-                ),
-                _buildDetailCard(
-                  title: 'Total Load (${widget.weightUnit}*s)',
-                  trailing:
-                      '${totalLoad.toStringAsFixed(2)} ${widget.weightUnit}*s',
-                  textColor: textColor,
-                  cardColor: cardColor,
-                  shadowColor: shadowColor,
-                ),
-                _buildDetailCard(
-                  title: 'Standard Deviation',
-                  trailing:
-                      '${calculateForceVariability(widget.graphData).toStringAsFixed(2)}',
-                  textColor: textColor,
-                  cardColor: cardColor,
-                  shadowColor: shadowColor,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-      backgroundColor: backgroundColor, // Set background for dark mode
+          backgroundColor: backgroundColor, // Set background for dark mode
+        );
+      },
     );
   }
 

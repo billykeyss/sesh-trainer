@@ -4,6 +4,9 @@ import '../database/session_database.dart';
 import '../widgets/weight_graph.dart';
 import '../utils/number.dart';
 import '../widgets/display_card.dart'; // Import the DisplayCard widget
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
+import '../models/info.dart';
 
 class InsightsPage extends StatefulWidget {
   @override
@@ -42,6 +45,9 @@ class _InsightsPageState extends State<InsightsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final selectedUnit = themeProvider.unit;
+
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
@@ -67,22 +73,22 @@ class _InsightsPageState extends State<InsightsPage> {
       );
     }
 
-    // Calculate aggregates
+    // Calculate aggregates and convert to selected unit
     final totalSessions = sessions.length;
     final totalDuration = sessions.map((s) => s.elapsedTimeMs).reduce((a, b) => a + b);
-    final averageMaxWeight = sessions
-        .map((s) => calculateMaxWeightFromJson(s.graphData))
-        .reduce((a, b) => a + b) /
-        totalSessions;
-    final heaviestPull = sessions
-        .map((s) => calculateMaxWeightFromJson(s.graphData))
-        .reduce((a, b) => a > b ? a : b);
-    final lightestPull = sessions
-        .map((s) => calculateMinWeightFromJson(s.graphData))
-        .reduce((a, b) => a < b ? a : b);
+
+    // Aggregate weight calculations
+    final weightsInKg = sessions.map((s) => calculateMaxWeightFromJson(s.graphData)).toList();
+    final convertedWeights = weightsInKg.map((weight) {
+      return selectedUnit == Info.Pounds ? convertKgToLbs(weight) : weight;
+    }).toList();
+
+    final averageMaxWeight = convertedWeights.reduce((a, b) => a + b) / totalSessions;
+    final heaviestPull = convertedWeights.reduce((a, b) => a > b ? a : b);
+    final lightestPull = convertedWeights.reduce((a, b) => a < b ? a : b);
 
     // Prepare graph data for max weight timeline
-    final timelineData = _getTimelineData(sessions);
+    final timelineData = _getTimelineData(sessions, selectedUnit);
 
     return Scaffold(
       appBar: AppBar(
@@ -100,15 +106,15 @@ class _InsightsPageState extends State<InsightsPage> {
             SizedBox(
               child: WeightGraph(
                 graphData: timelineData,
-                weightUnit: 'lbs', // or 'kgs' based on your app's configuration
+                weightUnit: selectedUnit,
               ),
             ),
             GridView.count(
-              crossAxisCount: 2, // Number of columns
+              crossAxisCount: 2,
               childAspectRatio: 1,
               padding: const EdgeInsets.all(8.0),
-              physics: NeverScrollableScrollPhysics(), // Prevent scrolling inside grid
-              shrinkWrap: true, // Allows the grid to take up only as much space as it needs
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
               children: [
                 DisplayCard(
                   title: 'Total Sessions',
@@ -123,17 +129,17 @@ class _InsightsPageState extends State<InsightsPage> {
                 DisplayCard(
                   title: 'Average Max Weight',
                   value: '${averageMaxWeight.toStringAsFixed(2)}',
-                  unit: 'lbs', // or 'kgs' based on your app's configuration
+                  unit: selectedUnit,
                 ),
                 DisplayCard(
                   title: 'Heaviest Pull',
                   value: '${heaviestPull.toStringAsFixed(2)}',
-                  unit: 'lbs', // or 'kgs' based on your app's configuration
+                  unit: selectedUnit,
                 ),
                 DisplayCard(
                   title: 'Lightest Pull',
                   value: '${lightestPull.toStringAsFixed(2)}',
-                  unit: 'lbs', // or 'kgs' based on your app's configuration
+                  unit: selectedUnit,
                 ),
               ],
             ),
@@ -143,11 +149,14 @@ class _InsightsPageState extends State<InsightsPage> {
     );
   }
 
-  List<FlSpot> _getTimelineData(List<Session> sessions) {
+  List<FlSpot> _getTimelineData(List<Session> sessions, String unit) {
     List<FlSpot> spots = [];
     sessions.sort((a, b) => a.sessionTime.compareTo(b.sessionTime));
     for (int i = 0; i < sessions.length; i++) {
-      final maxWeight = calculateMaxWeightFromJson(sessions[i].graphData);
+      double maxWeight = calculateMaxWeightFromJson(sessions[i].graphData);
+      if (unit == Info.Pounds) {
+        maxWeight = convertKgToLbs(maxWeight);
+      }
       spots.add(FlSpot(i.toDouble(), maxWeight));
     }
     return spots;

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../database/session_database.dart';
 import 'session_list_item.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:convert';
 import '../utils/number.dart';
+import '../providers/theme_provider.dart';
+import '../models/info.dart';
 
 class SessionList extends StatefulWidget {
   final List<Session> sessions;
@@ -26,12 +29,24 @@ class _SessionListState extends State<SessionList> {
   String _selectedSort = 'name'; // Default sorting option
   bool _isAscending = true; // Default sort order
 
+  double _convertWeight(double weight, String fromUnit, String toUnit) {
+    if (fromUnit == toUnit) return weight;
+    if (fromUnit == Info.Kilogram && toUnit == Info.Pounds) {
+      return convertKgToLbs(weight);
+    } else if (fromUnit == Info.Pounds && toUnit == Info.Kilogram) {
+      return convertLbsToKg(weight);
+    }
+    return weight; // Fallback, should never hit this if units are correct
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
     final iconColor = isDarkMode ? Colors.white : Colors.black;
+
+    // Get the default unit from ThemeProvider
+    final defaultUnit = Provider.of<ThemeProvider>(context).unit;
 
     // Sort sessions based on selected option and order
     List<Session> sortedSessions = List.from(widget.sessions);
@@ -42,8 +57,10 @@ class _SessionListState extends State<SessionList> {
           comparison = a.sessionTime.compareTo(b.sessionTime);
           break;
         case 'maxWeight':
-          final aMaxWeight = calculateMaxWeightFromJson(a.graphData);
-          final bMaxWeight = calculateMaxWeightFromJson(b.graphData);
+          final aMaxWeight = _convertWeight(
+              calculateMaxWeightFromJson(a.graphData), a.weightUnit, defaultUnit);
+          final bMaxWeight = _convertWeight(
+              calculateMaxWeightFromJson(b.graphData), b.weightUnit, defaultUnit);
           comparison = aMaxWeight.compareTo(bMaxWeight);
           break;
         case 'name':

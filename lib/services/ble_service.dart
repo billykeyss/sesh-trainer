@@ -1,6 +1,7 @@
 import 'package:flutter_blue/flutter_blue.dart';
 import '../models/info.dart';
 import '../models/res_json.dart';
+import 'dart:math';
 
 typedef Callback = void Function(ResJson res);
 
@@ -24,7 +25,7 @@ class LeScanCallback {
       }
       final unit = mu[14] & 0x0f;
       final data = Info(
-        weight: weight,
+        weight: max(weight / -100.0, 0.0),
         unit: unit,
         name: 'IF_B7',
         device: scanResult.device,

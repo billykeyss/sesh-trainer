@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:convert';
+import '../models/info.dart';
 
 double roundToNearest10(double value) {
   return (value / 10).round() * 10.0;
@@ -43,5 +44,25 @@ double calculateMaxWeightFromJson(String graphData) {
 
 double calculateMinWeightFromJson(String graphData) {
   final List<dynamic> data = jsonDecode(graphData);
-  return data.map((item) => item['y'] as double).reduce((a, b) => a < b ? a : b);
+  return data
+      .map((item) => item['y'] as double)
+      .reduce((a, b) => a < b ? a : b);
+}
+
+double convertKgToLbs(double kg) {
+  return kg * 2.20462; // Conversion factor for kg to lbs
+}
+
+double convertLbsToKg(double lbs) {
+  return lbs / 2.20462; // Conversion factor for lbs to kg
+}
+
+double convertWeight(double weight, String fromUnit, String toUnit) {
+  if (fromUnit == toUnit) return weight;
+  if (fromUnit == Info.Kilogram && toUnit == Info.Pounds) {
+    return convertKgToLbs(weight);
+  } else if (fromUnit == Info.Pounds && toUnit == Info.Kilogram) {
+    return convertLbsToKg(weight);
+  }
+  return weight; // Fallback, should never hit this if units are correct
 }

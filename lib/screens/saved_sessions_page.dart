@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart'; // Import provider
 import '../database/session_database.dart';
 import 'package:drift/drift.dart' as drift;
 import 'session_details_page.dart';
 import 'dart:convert';
 import '../widgets/session_list.dart'; // Import the new component
+import '../providers/theme_provider.dart'; // Import ThemeProvider
+import '../utils/number.dart'; // Utility functions
 
 class SavedSessionsPage extends StatefulWidget {
   @override
@@ -137,23 +140,29 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
           ),
         ],
       ),
-      body: savedSessions.isEmpty
-          ? Center(
-              child: Text(
-                'No sessions yet',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-            )
-          : SessionList(
-              sessions: savedSessions,
-              onViewDetails: _viewSessionDetails,
-              onDelete: _deleteSession,
-              onRename: _renameSession,
-            ),
+      body: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          String selectedUnit = themeProvider.unit;
+
+          return savedSessions.isEmpty
+              ? Center(
+                  child: Text(
+                    'No sessions yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                )
+              : SessionList(
+                  sessions: savedSessions,
+                  onViewDetails: _viewSessionDetails,
+                  onDelete: _deleteSession,
+                  onRename: _renameSession,
+                );
+        },
+      ),
     );
   }
 }

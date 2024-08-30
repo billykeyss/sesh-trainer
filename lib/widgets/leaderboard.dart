@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/leaderboard_entry.dart';
+import '../models/info.dart';
 import '../providers/leaderboard_provider.dart';
+import '../providers/theme_provider.dart';
+import '../utils/number.dart';
 
 class Leaderboard extends StatelessWidget {
   final bool isPreviewMode;
@@ -13,8 +16,10 @@ class Leaderboard extends StatelessWidget {
     final theme = Theme.of(context); // Get the current theme
     final isDarkMode = theme.brightness == Brightness.dark; // Check if dark mode is enabled
 
-    return Consumer<LeaderboardProvider>(
-      builder: (context, leaderboardProvider, child) {
+    return Consumer2<LeaderboardProvider, ThemeProvider>(
+      builder: (context, leaderboardProvider, themeProvider, child) {
+        final weightUnit = themeProvider.unit; // Get the default unit from ThemeProvider
+
         return Column(
           children: [
             Row(
@@ -58,6 +63,7 @@ class Leaderboard extends StatelessWidget {
                         'Men',
                         leaderboardProvider.maleEntries,
                         context,
+                        weightUnit, // Pass weightUnit to the method
                         isDarkMode ? Colors.blueGrey[800] : Colors.blue[100],
                       ),
                     ),
@@ -67,6 +73,7 @@ class Leaderboard extends StatelessWidget {
                         'Women',
                         leaderboardProvider.femaleEntries,
                         context,
+                        weightUnit, // Pass weightUnit to the method
                         isDarkMode ? Colors.blueGrey[800] : Colors.pink[100],
                       ),
                     ),
@@ -84,6 +91,7 @@ class Leaderboard extends StatelessWidget {
     String title, 
     List<LeaderboardEntry> entries, 
     BuildContext context, 
+    String weightUnit, // Add weightUnit parameter
     Color? backgroundColor,
   ) {
     final topEntries = isPreviewMode ? entries.take(3).toList() : entries;
@@ -129,7 +137,8 @@ class Leaderboard extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final entry = topEntries[index];
-                double weightInLbs = entry.maxWeight * 2.20462;
+                double adjustedWeight = weightUnit == Info.Pounds ? convertKgToLbs(entry.maxWeight) : entry.maxWeight;
+                String unitLabel = weightUnit == Info.Pounds ? Info.Pounds : Info.Kilogram;
 
                 return ListTile(
                   contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -159,7 +168,7 @@ class Leaderboard extends StatelessWidget {
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                '${weightInLbs.toStringAsFixed(1)} lbs',
+                                '${adjustedWeight.toStringAsFixed(1)} $unitLabel',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: isDarkMode ? Colors.white70 : Colors.black87,

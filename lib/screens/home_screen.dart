@@ -23,6 +23,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'dart:math';
 import 'package:ble_scale_app/utils/email_utils.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class ScaleHomePage extends StatefulWidget {
   @override
@@ -33,9 +34,8 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   BluetoothDevice? connectedDevice;
   String elapsedTime = '0:00';
-  bool showTestButton = true; // Feature gate for the test button
+  bool showTestButton = false; // Feature gate for the test button
   bool showLeaderboard = true; // Feature flag for the leaderboard
-  bool isNightMode = false; // Night mode toggle
 
   Leaderboard leaderboard = Leaderboard(isPreviewMode: true);
 
@@ -90,6 +90,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   void viewDetails() {
     final dynoDataProvider =
         Provider.of<DynoDataProvider>(context, listen: false);
+    final unit = Provider.of<ThemeProvider>(context, listen: false).unit;
 
     if (dynoDataProvider.graphData.isNotEmpty) {
       Navigator.push(
@@ -100,7 +101,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
             sessionStartTime: DateTime.fromMillisecondsSinceEpoch(
                 dynoDataProvider.sessionStartTime),
             elapsedTimeMs: dynoDataProvider.stopwatch.elapsedMilliseconds,
-            weightUnit: dynoDataProvider.weightUnit,
+            weightUnit: unit, // Use the selected unit
             sessionName:
                 'Session ${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}', // Example session name
           ),
@@ -117,6 +118,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     final _formKey = GlobalKey<FormState>();
     final dynoDataProvider =
         Provider.of<DynoDataProvider>(context, listen: false);
+    final unit = Provider.of<ThemeProvider>(context, listen: false).unit;
 
     if (dynoDataProvider.graphData.isNotEmpty) {
       showDialog(
@@ -185,14 +187,21 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                     final graphData = dynoDataProvider.graphData
                         .map((spot) => {'x': spot.x, 'y': spot.y})
                         .toList();
-                    final maxWeight = dynoDataProvider
+                    double maxWeight = dynoDataProvider
                             .maxWeights[dynoDataProvider.weightUnit] ??
                         0.0;
-                    final weightUnit = dynoDataProvider.weightUnit;
+                    if (unit == Info.Pounds &&
+                        dynoDataProvider.weightUnit == Info.Kilogram) {
+                      maxWeight = convertKgToLbs(maxWeight);
+                    }
                     final elapsedTime =
                         dynoDataProvider.stopwatch.elapsed.toString();
-                    final averageWeight = dynoDataProvider.averageWeight;
-                    final totalLoad = dynoDataProvider.totalLoad;
+                    final averageWeight = unit == Info.Pounds
+                        ? convertKgToLbs(dynoDataProvider.averageWeight)
+                        : dynoDataProvider.averageWeight;
+                    final totalLoad = unit == Info.Pounds
+                        ? convertKgToLbs(dynoDataProvider.totalLoad)
+                        : dynoDataProvider.totalLoad;
 
                     // Add entry to the leaderboard
                     LeaderboardService().addEntry(LeaderboardEntry(
@@ -211,7 +220,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                         sessionStartTime,
                         graphData,
                         maxWeight,
-                        weightUnit,
+                        unit,
                         elapsedTime,
                         averageWeight,
                         totalLoad,
@@ -240,7 +249,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
       if (timer.tick <= 5) {
         double randomWeight = 50 + Random().nextDouble() * 100;
         Info testInfo = Info(
-          weight: randomWeight.toInt(),
+          weight: randomWeight,
           unit:
               Info.WEIGHT_KGS, // Use either Info.WEIGHT_KGS or Info.WEIGHT_LBS
           name: 'Test',
@@ -259,6 +268,8 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     Orientation orientation = MediaQuery.of(context).orientation;
 
     int crossAxisCount = orientation == Orientation.portrait ? 3 : 3;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final selectedUnit = themeProvider.unit;
 
     return Scaffold(
       appBar: AppBar(
@@ -332,6 +343,20 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                 },
               ),
             ),
+            ListTile(
+              leading: Icon(Icons.swap_horiz),
+              title: Text('Unit: $selectedUnit'),
+              trailing: Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  return Switch(
+                    value: selectedUnit == Info.Pounds,
+                    onChanged: (bool value) {
+                      themeProvider.toggleUnit(value);
+                    },
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -367,7 +392,6 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
           ] else ...[
             if (showLeaderboard)
               Flexible(
-                flex: 4,
                 child: FutureBuilder(
                   future: _fetchLeaderboardData(),
                   builder: (context, snapshot) {
@@ -381,9 +405,30 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                   },
                 ),
               ),
-            DynoDataDisplay(crossAxisCount: crossAxisCount),
           ],
-          StatusIconBar(),
+          Padding(
+            padding: const EdgeInsets.only(
+                bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
+            child: Consumer<DynoDataProvider>(
+              builder: (context, dynoDataProvider, child) {
+                final graphData = dynoDataProvider.graphData.map((spot) {
+                  double convertedWeight = spot.y;
+                  if (selectedUnit == Info.Pounds &&
+                      dynoDataProvider.weightUnit == Info.Kilogram) {
+                    convertedWeight = convertKgToLbs(spot.y);
+                  } else if (selectedUnit == Info.Kilogram &&
+                      dynoDataProvider.weightUnit == Info.Pounds) {
+                    convertedWeight = convertLbsToKg(spot.y);
+                  }
+                  return FlSpot(spot.x, convertedWeight);
+                }).toList();
+                return WeightGraph(
+                  graphData: graphData,
+                  weightUnit: selectedUnit,
+                );
+              },
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
             child: Row(
@@ -415,6 +460,14 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                         horizontal: 10, vertical: 10),
                   ),
                 ),
+                ElevatedButton(
+                  onPressed: viewDetails,
+                  child: const Text('View Details'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
+                  ),
+                ),
                 if (showTestButton) // Feature gate for the test button
                   ElevatedButton(
                     onPressed: _runTestSession,
@@ -427,20 +480,12 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 24.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: viewDetails,
-                  child: const Text('View Details'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 10),
-                  ),
-                ),
-                if (showLeaderboard)
+          if (showLeaderboard)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 0.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
                   ElevatedButton(
                     onPressed: () {
                       _addToLeaderboard(context);
@@ -451,20 +496,11 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                           horizontal: 10, vertical: 10),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(
-                bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
-            child: WeightGraph(
-                graphData: Provider.of<DynoDataProvider>(context, listen: false)
-                    .graphData,
-                weightUnit:
-                    Provider.of<DynoDataProvider>(context, listen: false)
-                        .weightUnit),
-          ),
-          
+          DynoDataDisplay(crossAxisCount: crossAxisCount),
+          StatusIconBar(),
         ],
       ),
     );

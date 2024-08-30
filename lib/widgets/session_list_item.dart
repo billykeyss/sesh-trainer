@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../database/session_database.dart';
 import '../utils/number.dart';
+import 'package:provider/provider.dart'; // Import provider package
+import '../providers/theme_provider.dart'; // Import ThemeProvider for default unit
 
 class SessionListItem extends StatelessWidget {
   final Session session;
@@ -20,9 +22,12 @@ class SessionListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Access the default unit from ThemeProvider
+    final defaultUnit = Provider.of<ThemeProvider>(context).unit;
+
     final elapsedTime = formatElapsedTimeIntToString(session.elapsedTimeMs);
     final maxWeight = calculateMaxWeightFromJson(session.graphData);
-    final weightUnit = session.weightUnit;
+    final convertedMaxWeight = convertWeight(maxWeight, session.weightUnit, defaultUnit);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -71,7 +76,7 @@ class SessionListItem extends StatelessWidget {
               ),
               SizedBox(height: 2.0), // Adding a small gap
               Text(
-                'Max Weight: ${maxWeight.toStringAsFixed(1)} $weightUnit',
+                'Max Weight: ${convertedMaxWeight.toStringAsFixed(1)} $defaultUnit',
                 style: TextStyle(
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
                 ),

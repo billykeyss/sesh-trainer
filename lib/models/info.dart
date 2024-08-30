@@ -6,7 +6,7 @@ class Info {
   static const String Pounds = "lbs";
   static const String Kilogram = "kg";
 
-  final int weight;
+  final double weight;
   final int unit;
   final String name;
   final BluetoothDevice? device; // Made optional by adding a `?`
