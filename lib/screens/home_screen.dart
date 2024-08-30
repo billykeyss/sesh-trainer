@@ -6,22 +6,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
-import '../models/leaderboard_entry.dart';
-import '../models/info.dart';
-import '../providers/leaderboard_provider.dart';
-import '../services/leaderboard_service.dart';
-import '../widgets/leaderboard.dart';
-import '../widgets/weight_graph.dart';
-import '../screens/session_details_page.dart';
-import './saved_sessions_page.dart';
-import './leaderboard_page.dart';
-import '../utils/number.dart';
+import 'package:ble_scale_app/models/leaderboard_entry.dart';
+import 'package:ble_scale_app/models/info.dart';
+import 'package:ble_scale_app/providers/leaderboard_provider.dart';
+import 'package:ble_scale_app/providers/theme_provider.dart';
+import 'package:ble_scale_app/services/leaderboard_service.dart';
+import 'package:ble_scale_app/widgets/leaderboard.dart';
+import 'package:ble_scale_app/widgets/weight_graph.dart';
+import 'package:ble_scale_app/screens/session_details_page.dart';
+import 'package:ble_scale_app/screens/saved_sessions_page.dart';
+import 'package:ble_scale_app/screens/leaderboard_page.dart';
+import 'package:ble_scale_app/utils/number.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'dart:math';
-import '../utils/email_utils.dart';
-
+import 'package:ble_scale_app/utils/email_utils.dart';
 class ScaleHomePage extends StatefulWidget {
   @override
   _ScaleHomePageState createState() => _ScaleHomePageState();
@@ -33,6 +33,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   String elapsedTime = '0:00';
   bool showTestButton = true; // Feature gate for the test button
   bool showLeaderboard = true; // Feature flag for the leaderboard
+  bool isNightMode = false; // Night mode toggle
 
   Leaderboard leaderboard = Leaderboard(isPreviewMode: true);
 
@@ -302,6 +303,21 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                   );
                 },
               ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.brightness_6),
+              title: Text('Night Mode'),
+              trailing: Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  return Switch(
+                    value: themeProvider.isDarkMode,
+                    onChanged: (value) {
+                      themeProvider.toggleTheme(value);
+                    },
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -400,7 +416,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
           Padding(
             padding: const EdgeInsets.only(
                 bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
-            child: WeightGraph(),
+            child: WeightGraph(graphData: Provider.of<DynoDataProvider>(context, listen: false).graphData, weightUnit: Provider.of<DynoDataProvider>(context, listen: false).weightUnit),
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 24.0),

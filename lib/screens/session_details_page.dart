@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:ble_scale_app/widgets/weight_graph.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -180,7 +181,9 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: StaticWeightGraph(graphData: widget.graphData),
+                    child: WeightGraph(
+                        graphData: widget.graphData,
+                        weightUnit: widget.weightUnit),
                   ),
                 ),
                 const SizedBox(height: 16.0),

@@ -10,6 +10,9 @@ class Leaderboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Get the current theme
+    final isDarkMode = theme.brightness == Brightness.dark; // Check if dark mode is enabled
+
     return Consumer<LeaderboardProvider>(
       builder: (context, leaderboardProvider, child) {
         return Column(
@@ -23,7 +26,7 @@ class Leaderboard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 24, 
                       fontWeight: FontWeight.bold, 
-                      color: Colors.blueGrey[800],
+                      color: isDarkMode ? Colors.white : Colors.blueGrey[800],
                     ),
                   ),
                 ),
@@ -55,7 +58,7 @@ class Leaderboard extends StatelessWidget {
                         'Men',
                         leaderboardProvider.maleEntries,
                         context,
-                        Colors.blue[100],
+                        isDarkMode ? Colors.blueGrey[800] : Colors.blue[100],
                       ),
                     ),
                     SizedBox(width: 16.0),
@@ -64,7 +67,7 @@ class Leaderboard extends StatelessWidget {
                         'Women',
                         leaderboardProvider.femaleEntries,
                         context,
-                        Colors.pink[100],
+                        isDarkMode ? Colors.blueGrey[800] : Colors.pink[100],
                       ),
                     ),
                   ],
@@ -84,6 +87,8 @@ class Leaderboard extends StatelessWidget {
     Color? backgroundColor,
   ) {
     final topEntries = isPreviewMode ? entries.take(3).toList() : entries;
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
@@ -91,7 +96,7 @@ class Leaderboard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.black.withOpacity(0.2),
             spreadRadius: 2,
             blurRadius: 5,
             offset: Offset(0, 3), // Position of the shadow
@@ -107,14 +112,21 @@ class Leaderboard extends StatelessWidget {
             child: Center(
               child: Text(
                 '$title Top ${isPreviewMode ? 3 : entries.length}',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold, 
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
               ),
             ),
           ),
           Expanded(
             child: ListView.separated(
               itemCount: topEntries.length,
-              separatorBuilder: (context, index) => Divider(height: 1.0, color: Colors.grey[300]),
+              separatorBuilder: (context, index) => Divider(
+                height: 1.0, 
+                color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+              ),
               itemBuilder: (context, index) {
                 final entry = topEntries[index];
                 double weightInLbs = entry.maxWeight * 2.20462;
@@ -132,7 +144,10 @@ class Leaderboard extends StatelessWidget {
                               fit: BoxFit.scaleDown,
                               child: Text(
                                 '${index + 1}. ${entry.name}',
-                                style: TextStyle(fontSize: 16),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -146,7 +161,9 @@ class Leaderboard extends StatelessWidget {
                               child: Text(
                                 '${weightInLbs.toStringAsFixed(1)} lbs',
                                 style: TextStyle(
-                                    fontSize: 12,),
+                                  fontSize: 12,
+                                  color: isDarkMode ? Colors.white70 : Colors.black87,
+                                ),
                               ),
                             ),
                           ),

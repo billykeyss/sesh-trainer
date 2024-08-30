@@ -7,9 +7,11 @@ import 'providers/leaderboard_provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'providers/theme_provider.dart'; // Import the ThemeProvider
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   // Check the platform before setting orientations
   if (Platform.isIOS) {
     // Set orientation preferences without using context
@@ -18,11 +20,13 @@ void main() async {
       DeviceOrientation.portraitDown,
     ]);
   }
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => LeaderboardProvider()),
         ChangeNotifierProvider(create: (context) => DynoDataProvider()),
+        ChangeNotifierProvider(create: (context) => ThemeProvider()), // Add ThemeProvider
       ],
       child: MyApp(),
     ),
@@ -58,12 +62,16 @@ class MyApp extends StatelessWidget {
       ]);
     }
 
-    return MaterialApp(
-      title: 'Scale App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: ScaleHomePage(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'Scale App',
+          theme: ThemeData.light(), // Define light theme
+          darkTheme: ThemeData.dark(), // Define dark theme
+          themeMode: themeProvider.themeMode, // Apply current theme mode
+          home: ScaleHomePage(),
+        );
+      },
     );
   }
 }

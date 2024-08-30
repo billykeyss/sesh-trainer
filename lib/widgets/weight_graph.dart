@@ -1,15 +1,21 @@
-import 'package:ble_scale_app/providers/dyno_data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:provider/provider.dart';
 
 class WeightGraph extends StatelessWidget {
+  final List<FlSpot> graphData; // Accepting graphData as a parameter
+  final String weightUnit; // Accepting weightUnit as a parameter
+
+  WeightGraph({
+    required this.graphData,
+    required this.weightUnit,
+  });
+
   @override
   Widget build(BuildContext context) {
-    // Access the GraphDataProvider from the context
-    final graphDataProvider = Provider.of<DynoDataProvider>(context);
-    final graphData = graphDataProvider.graphData;
-    double maxWeight = graphDataProvider.maxWeights[graphDataProvider.weightUnit] ?? 0.0;
+    // Calculate maxWeight from the graphData
+    double maxWeight = graphData.isNotEmpty
+        ? graphData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b)
+        : 0.0;
 
     double minY = 0;
     double maxY = 5;
@@ -27,19 +33,24 @@ class WeightGraph extends StatelessWidget {
     double interval = (maxX - 0) / 10;
     double chartHeight = 200.0; // The height of the chart (from SizedBox)
     double chartWidth = 800.0;
-    double scaleFactor = chartHeight / (maxY); // Calculate pixels per unit
+
+    // Accessing the current theme
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyMedium?.color ?? Colors.black;
+    final gridColor = theme.dividerColor;
+    final lineColor = theme.primaryColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.only(
-              bottom: 8.0, top: 4.0), // Add bottom padding
+          padding: const EdgeInsets.only(bottom: 8.0, top: 4.0), // Add bottom padding
           child: Text(
             'Weight vs. Time', // Graph Title
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: textColor,
             ),
           ),
         ),
@@ -48,8 +59,17 @@ class WeightGraph extends StatelessWidget {
           width: chartWidth,
           child: LineChart(
             LineChartData(
-              gridData: const FlGridData(show: true),
-              borderData: FlBorderData(show: true),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: true,
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(color: gridColor, strokeWidth: 0.5);
+                },
+                getDrawingVerticalLine: (value) {
+                  return FlLine(color: gridColor, strokeWidth: 0.5);
+                },
+              ),
+              borderData: FlBorderData(show: true, border: Border.all(color: gridColor, width: 1)),
               titlesData: FlTitlesData(
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
@@ -60,10 +80,7 @@ class WeightGraph extends StatelessWidget {
                         axisSide: meta.axisSide,
                         child: Text(
                           value.toInt().toString(),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black,
-                          ),
+                          style: TextStyle(fontSize: 14, color: textColor),
                         ),
                       );
                     },
@@ -79,30 +96,29 @@ class WeightGraph extends StatelessWidget {
                         axisSide: meta.axisSide,
                         child: Text(
                           value.toInt().toString(),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black,
-                          ),
+                          style: TextStyle(fontSize: 14, color: textColor),
                         ),
                       );
                     },
                   ),
                 ),
-                topTitles: const AxisTitles(
+                topTitles: AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
-                rightTitles: const AxisTitles(
-                  sideTitles:
-                      SideTitles(showTitles: false), // Remove right axis
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
                 ),
               ),
               lineBarsData: [
                 LineChartBarData(
                   spots: graphData,
                   isCurved: false,
-                  color: Colors.blue,
+                  color: lineColor,
                   barWidth: 2,
-                  belowBarData: BarAreaData(show: true),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: lineColor.withOpacity(0.3),
+                  ),
                 ),
                 LineChartBarData(
                   spots: [
@@ -135,7 +151,7 @@ class WeightGraph extends StatelessWidget {
               maxX: maxX,
             ),
           ),
-        )
+        ),
       ],
     );
   }
