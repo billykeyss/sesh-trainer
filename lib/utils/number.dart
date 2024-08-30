@@ -1,4 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:convert';
 
 double roundToNearest10(double value) {
   return (value / 10).round() * 10.0;
@@ -30,4 +31,12 @@ double calculateAverageWeight(List<FlSpot> graphData) {
 
 double calculateTotalLoad(List<FlSpot> graphData) {
   return graphData.fold(0.0, (total, spot) => total + spot.y);
+}
+
+double calculateMaxWeightFromJson(String graphData) {
+  final List<dynamic> data = jsonDecode(graphData);
+  final List<FlSpot> spots =
+      data.map((item) => FlSpot(item['x'], item['y'])).toList();
+  if (spots.isEmpty) return 0.0;
+  return spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
 }

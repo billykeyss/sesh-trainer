@@ -122,6 +122,13 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+    final backgroundColor = isDarkMode ? Colors.grey[850] : Colors.white;
+    final Color cardColor = isDarkMode ? Colors.grey[800] ?? Colors.grey  : Colors.white;
+    final shadowColor = isDarkMode ? Colors.black.withOpacity(0.1) : Colors.black.withOpacity(0.2);
+
     final maxWeight = calculateMaxWeight(widget.graphData);
     final averageWeight = calculateAverageWeight(widget.graphData);
     final totalLoad = calculateTotalLoad(widget.graphData);
@@ -134,7 +141,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
             border: InputBorder.none,
           ),
           style: TextStyle(
-            color: Colors.black, // Changed text color to black
+            color: textColor, // Dynamic text color
             fontSize: 20.0,
             fontWeight: FontWeight.bold,
           ),
@@ -144,9 +151,10 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
             }
           },
         ),
+        backgroundColor: theme.appBarTheme.backgroundColor, // Adjust for dark mode
         actions: [
           IconButton(
-            icon: Icon(Icons.share),
+            icon: Icon(Icons.share, color: textColor),
             onPressed: () => _shareSessionDetails(context),
           ),
         ],
@@ -160,10 +168,12 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
               children: [
                 // Graph Widget
                 Card(
+                  color: cardColor, // Adjust card color for dark mode
                   elevation: 4.0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
+                  shadowColor: shadowColor, // Adjust shadow color for dark mode
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: WeightGraph(
@@ -177,56 +187,89 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                   title: 'Session Time',
                   trailing:
                       '${DateFormat('MMM d, yyyy, h:mm a').format(widget.sessionStartTime)}',
+                  textColor: textColor,
+                  cardColor: cardColor,
+                  shadowColor: shadowColor,
                 ),
                 _buildDetailCard(
                   title: 'Elapsed Time',
                   trailing:
                       '${formatElapsedTimeIntToString(widget.elapsedTimeMs)}',
+                  textColor: textColor,
+                  cardColor: cardColor,
+                  shadowColor: shadowColor,
                 ),
                 _buildDetailCard(
                   title: 'Max Pull',
                   trailing:
                       '${maxWeight.toStringAsFixed(2)} ${widget.weightUnit}',
+                  textColor: textColor,
+                  cardColor: cardColor,
+                  shadowColor: shadowColor,
                 ),
                 _buildDetailCard(
                   title: '80% Pull',
                   trailing:
                       '${(maxWeight * 0.8).toStringAsFixed(2)} ${widget.weightUnit}',
+                  textColor: textColor,
+                  cardColor: cardColor,
+                  shadowColor: shadowColor,
                 ),
                 _buildDetailCard(
                   title: '20% Pull',
                   trailing:
                       '${(maxWeight * 0.2).toStringAsFixed(2)} ${widget.weightUnit}',
+                  textColor: textColor,
+                  cardColor: cardColor,
+                  shadowColor: shadowColor,
                 ),
                 _buildDetailCard(
                   title: 'Average Pull',
                   trailing:
                       '${averageWeight.toStringAsFixed(2)} ${widget.weightUnit}',
+                  textColor: textColor,
+                  cardColor: cardColor,
+                  shadowColor: shadowColor,
                 ),
                 _buildDetailCard(
                   title: 'Total Load (${widget.weightUnit}*s)',
                   trailing:
                       '${totalLoad.toStringAsFixed(2)} ${widget.weightUnit}*s',
+                  textColor: textColor,
+                  cardColor: cardColor,
+                  shadowColor: shadowColor,
                 ),
                 _buildDetailCard(
                   title: 'Standard Deviation',
                   trailing:
                       '${calculateForceVariability(widget.graphData).toStringAsFixed(2)}',
+                  textColor: textColor,
+                  cardColor: cardColor,
+                  shadowColor: shadowColor,
                 ),
               ],
             ),
           ),
         ),
       ),
+      backgroundColor: backgroundColor, // Set background for dark mode
     );
   }
 
-  Widget _buildDetailCard({required String title, required String trailing}) {
+  Widget _buildDetailCard({
+    required String title,
+    required String trailing,
+    required Color textColor,
+    required Color cardColor,
+    required Color shadowColor,
+  }) {
     return Card(
+      color: cardColor, // Adjust card color for dark mode
       elevation: 4.0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),
       ),
+      shadowColor: shadowColor, // Adjust shadow color for dark mode
       child: ListTile(
         contentPadding: EdgeInsets.all(8.0),
         title: Padding(
@@ -234,7 +277,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
               horizontal: 8.0), // Added horizontal padding
           child: Text(
             title,
-            style: TextStyle(fontSize: 18.0), // Increased font size for title
+            style: TextStyle(fontSize: 18.0, color: textColor), // Increased font size for title and color
           ),
         ),
         trailing: Padding(
@@ -243,7 +286,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
           child: Text(
             trailing,
             style: TextStyle(
-                fontSize: 16.0), // Increased font size for trailing text
+                fontSize: 16.0, color: textColor), // Increased font size for trailing text and color
           ),
         ),
       ),

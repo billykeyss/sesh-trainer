@@ -3,6 +3,7 @@ import '../database/session_database.dart';
 import 'session_list_item.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:convert';
+import '../utils/number.dart';
 
 class SessionList extends StatefulWidget {
   final List<Session> sessions;
@@ -25,16 +26,6 @@ class _SessionListState extends State<SessionList> {
   String _selectedSort = 'name'; // Default sorting option
   bool _isAscending = true; // Default sort order
 
-  double _calculateMaxWeight(String graphData) {
-    final List<dynamic> decodedData = jsonDecode(graphData);
-    final List<FlSpot> spots = decodedData
-        .map((item) => FlSpot(item['x'], item['y']))
-        .toList();
-
-    if (spots.isEmpty) return 0.0;
-
-    return spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +42,8 @@ class _SessionListState extends State<SessionList> {
           comparison = a.sessionTime.compareTo(b.sessionTime);
           break;
         case 'maxWeight':
-          final aMaxWeight = _calculateMaxWeight(a.graphData);
-          final bMaxWeight = _calculateMaxWeight(b.graphData);
+          final aMaxWeight = calculateMaxWeightFromJson(a.graphData);
+          final bMaxWeight = calculateMaxWeightFromJson(b.graphData);
           comparison = aMaxWeight.compareTo(bMaxWeight);
           break;
         case 'name':

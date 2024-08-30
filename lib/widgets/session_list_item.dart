@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../database/session_database.dart';
 import '../utils/number.dart';
 
@@ -20,25 +18,10 @@ class SessionListItem extends StatelessWidget {
     required this.onRename,
   });
 
-  String _formatElapsedTime(int milliseconds) {
-    final duration = Duration(milliseconds: milliseconds);
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "${twoDigits(duration.inHours)}:$minutes:$seconds";
-  }
-
-  double _calculateMaxWeight(String graphData) {
-    final List<dynamic> data = jsonDecode(graphData);
-    final List<FlSpot> spots = data.map((item) => FlSpot(item['x'], item['y'])).toList();
-    if (spots.isEmpty) return 0.0;
-    return spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
-  }
-
   @override
   Widget build(BuildContext context) {
     final elapsedTime = formatElapsedTimeIntToString(session.elapsedTimeMs);
-    final maxWeight = _calculateMaxWeight(session.graphData);
+    final maxWeight = calculateMaxWeightFromJson(session.graphData);
     final weightUnit = session.weightUnit;
 
     return Container(

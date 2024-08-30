@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class WeightGraph extends StatelessWidget {
-  final List<FlSpot> graphData; // Accepting graphData as a parameter
-  final String weightUnit; // Accepting weightUnit as a parameter
+  final List<FlSpot> graphData;
+  final String weightUnit;
 
   WeightGraph({
     required this.graphData,
@@ -36,9 +36,10 @@ class WeightGraph extends StatelessWidget {
 
     // Accessing the current theme
     final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyMedium?.color ?? Colors.black;
-    final gridColor = theme.dividerColor;
-    final lineColor = theme.primaryColor;
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+    final gridColor = isDarkMode ? Colors.white : Colors.grey;
+    final lineColor = isDarkMode ? Colors.white : Colors.black;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
