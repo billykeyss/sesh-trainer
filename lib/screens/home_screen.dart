@@ -260,47 +260,50 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sesh'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              switch (value) {
-                case 'Session Details':
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+              child: Text(
+                'Sesh',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.view_list),
+              title: Text('Session Details'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SavedSessionsPage(),
+                  ),
+                );
+              },
+            ),
+            if (showLeaderboard)
+              ListTile(
+                leading: Icon(Icons.leaderboard),
+                title: Text('Leaderboard'),
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => SavedSessionsPage()),
+                      builder: (context) => LeaderboardPage(),
+                    ),
                   );
-                  break;
-                case 'Leaderboard':
-                  if (showLeaderboard) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => LeaderboardPage()),
-                    );
-                  }
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              List<PopupMenuEntry<String>> menuItems = [
-                PopupMenuItem<String>(
-                  value: 'Session Details',
-                  child: Text('Session Details view'),
-                ),
-              ];
-              if (showLeaderboard) {
-                menuItems.add(
-                  PopupMenuItem<String>(
-                    value: 'Leaderboard',
-                    child: Text('Leaderboard view'),
-                  ),
-                );
-              }
-              return menuItems;
-            },
-          ),
-        ],
+                },
+              ),
+          ],
+        ),
       ),
       body: Column(
         children: [

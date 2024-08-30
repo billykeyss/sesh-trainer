@@ -1,4 +1,4 @@
-package com.example.ble_scale_app
+package com.sesh.dyno_trainer
 
 import io.flutter.embedding.android.FlutterActivity
 

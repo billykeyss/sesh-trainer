@@ -9,7 +9,9 @@ class StatusIconBar extends StatelessWidget {
       builder: (context, dynoDataProvider, child) {
         int lastDataReceivedTime = dynoDataProvider.lastDataReceivedTime;
 
-        bool isDeviceConnected = DateTime.now().millisecondsSinceEpoch - lastDataReceivedTime < 100000;
+        bool isDeviceConnected =
+            DateTime.now().millisecondsSinceEpoch - lastDataReceivedTime <
+                100000;
         bool isRecording = dynoDataProvider.recordData;
 
         return Row(
@@ -19,8 +21,8 @@ class StatusIconBar extends StatelessWidget {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(8.0), // Padding inside the border
-                margin: const EdgeInsets.only(
-                    right: 8.0), // Margin to separate the two sections
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 8.0), // Add margin to both left and right
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12.0),
                   border: Border.all(
@@ -32,19 +34,24 @@ class StatusIconBar extends StatelessWidget {
                   children: [
                     Expanded(
                       child: FittedBox(
-                        fit: BoxFit.scaleDown, // Scale text to fit within the container
+                        fit: BoxFit
+                            .scaleDown, // Scale text to fit within the container
                         child: Text(
-                          isDeviceConnected ? 'Device Connected' : 'Device Not Connected',
+                          isDeviceConnected
+                              ? 'Device Connected'
+                              : 'Device Not Connected',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: isDeviceConnected ? Colors.green : Colors.red,
+                            color:
+                                isDeviceConnected ? Colors.green : Colors.red,
                           ),
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 8.0), // Space between text and dot
+                      padding: const EdgeInsets.only(
+                          left: 8.0), // Space between text and dot
                       child: Icon(
                         Icons.circle,
                         color: isDeviceConnected ? Colors.green : Colors.red,
@@ -59,8 +66,8 @@ class StatusIconBar extends StatelessWidget {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(8.0), // Padding inside the border
-                margin: const EdgeInsets.only(
-                    left: 8.0), // Margin to separate the two sections
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 8.0), // Add margin to both left and right
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12.0),
                   border: Border.all(
@@ -72,7 +79,8 @@ class StatusIconBar extends StatelessWidget {
                   children: [
                     Expanded(
                       child: FittedBox(
-                        fit: BoxFit.scaleDown, // Scale text to fit within the container
+                        fit: BoxFit
+                            .scaleDown, // Scale text to fit within the container
                         child: Text(
                           isRecording ? 'Recording Data' : 'Not Recording Data',
                           style: TextStyle(
@@ -84,14 +92,16 @@ class StatusIconBar extends StatelessWidget {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 8.0), // Space between text and icon
+                      padding: const EdgeInsets.only(
+                          left: 8.0), // Space between text and icon
                       child: isRecording
                           ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.green),
                               ),
                             )
                           : Icon(
