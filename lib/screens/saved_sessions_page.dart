@@ -5,6 +5,7 @@ import '../database/session_database.dart';
 import 'package:drift/drift.dart' as drift;
 import 'session_details_page.dart';
 import 'dart:convert';
+import '../widgets/session_list.dart'; // Import the new component
 
 class SavedSessionsPage extends StatefulWidget {
   @override
@@ -147,60 +148,11 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
                 ),
               ),
             )
-          : ListView.builder(
-              itemCount: savedSessions.length,
-              itemBuilder: (context, index) {
-                final session = savedSessions[index];
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                      vertical: 8.0, horizontal: 16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8.0),
-                    border: Border.all(color: Colors.grey.shade300),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 4,
-                        offset: Offset(0, 2), // changes position of shadow
-                      ),
-                    ],
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16.0),
-                    title: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 16.0), // Add padding to the left of the title
-                      child: Text(
-                        session.name,
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(
-                          left:
-                              16.0), // Add padding to the left of the subtitle
-                      child: Text(
-                          'Last modified: ${DateFormat('MMM d, yyyy').format(session.sessionTime)}'),
-                    ),
-                    onTap: () => _viewSessionDetails(session),
-                    trailing: Wrap(
-                      spacing: 0, // Space between two icons
-                      children: <Widget>[
-                        IconButton(
-                          icon: Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _renameSession(session),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteSession(session),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+          : SessionList(
+              sessions: savedSessions,
+              onViewDetails: _viewSessionDetails,
+              onDelete: _deleteSession,
+              onRename: _renameSession,
             ),
     );
   }

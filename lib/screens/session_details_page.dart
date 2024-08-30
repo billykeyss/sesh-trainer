@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import '../utils/number.dart';
-import '../widgets/static_weight_graph.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -108,20 +107,6 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     }
   }
 
-  double calculateMaxWeight(List<FlSpot> graphData) {
-    return graphData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
-  }
-
-  double calculateAverageWeight(List<FlSpot> graphData) {
-    List<double> weights = graphData.map((spot) => spot.y).toList();
-    if (weights.isEmpty) return 0.0;
-    return weights.reduce((a, b) => a + b) / weights.length;
-  }
-
-  double calculateTotalLoad(List<FlSpot> graphData) {
-    return graphData.fold(0.0, (total, spot) => total + spot.y);
-  }
-
   double calculateForceVariability(List<FlSpot> graphData) {
     List<double> weights =
         graphData.where((spot) => spot.y > 0).map((spot) => spot.y).toList();
@@ -196,7 +181,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                 _buildDetailCard(
                   title: 'Elapsed Time',
                   trailing:
-                      '${formatElapsedTimeToString(widget.elapsedTimeMs)}',
+                      '${formatElapsedTimeIntToString(widget.elapsedTimeMs)}',
                 ),
                 _buildDetailCard(
                   title: 'Max Pull',
