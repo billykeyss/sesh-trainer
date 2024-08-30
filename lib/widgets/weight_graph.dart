@@ -58,100 +58,108 @@ class WeightGraph extends StatelessWidget {
         SizedBox(
           height: chartHeight,
           width: chartWidth,
-          child: LineChart(
-            LineChartData(
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: true,
-                getDrawingHorizontalLine: (value) {
-                  return FlLine(color: gridColor, strokeWidth: 0.5);
-                },
-                getDrawingVerticalLine: (value) {
-                  return FlLine(color: gridColor, strokeWidth: 0.5);
-                },
-              ),
-              borderData: FlBorderData(show: true, border: Border.all(color: gridColor, width: 1)),
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 40,
-                    getTitlesWidget: (value, meta) {
-                      return SideTitleWidget(
-                        axisSide: meta.axisSide,
-                        child: Text(
-                          value.toInt().toString(),
-                          style: TextStyle(fontSize: 14, color: textColor),
+          child: graphData.isEmpty // Check if graphData is empty
+              ? Center(
+                  child: Text(
+                    'No data available',
+                    style: TextStyle(color: textColor, fontSize: 16),
+                  ),
+                )
+              : LineChart(
+                  LineChartData(
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: true,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(color: gridColor, strokeWidth: 0.5);
+                      },
+                      getDrawingVerticalLine: (value) {
+                        return FlLine(color: gridColor, strokeWidth: 0.5);
+                      },
+                    ),
+                    borderData: FlBorderData(
+                        show: true, border: Border.all(color: gridColor, width: 1)),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                          getTitlesWidget: (value, meta) {
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              child: Text(
+                                value.toInt().toString(),
+                                style: TextStyle(fontSize: 14, color: textColor),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 40,
-                    interval: interval,
-                    getTitlesWidget: (value, meta) {
-                      return SideTitleWidget(
-                        axisSide: meta.axisSide,
-                        child: Text(
-                          value.toInt().toString(),
-                          style: TextStyle(fontSize: 14, color: textColor),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                          interval: interval,
+                          getTitlesWidget: (value, meta) {
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              child: Text(
+                                value.toInt().toString(),
+                                style: TextStyle(fontSize: 14, color: textColor),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
+                      ),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: graphData,
+                        isCurved: false,
+                        color: lineColor,
+                        barWidth: 2,
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: lineColor.withOpacity(0.3),
+                        ),
+                      ),
+                      LineChartBarData(
+                        spots: [
+                          FlSpot(0, maxWeight * 0.2),
+                          FlSpot(maxX, maxWeight * 0.2),
+                        ],
+                        isCurved: false,
+                        color: const Color.fromARGB(255, 221, 110, 102),
+                        barWidth: 2,
+                        isStrokeCapRound: true,
+                        dotData: const FlDotData(show: false),
+                        dashArray: [5, 5],
+                      ),
+                      LineChartBarData(
+                        spots: [
+                          FlSpot(0, maxWeight * 0.8),
+                          FlSpot(maxX, maxWeight * 0.8),
+                        ],
+                        isCurved: false,
+                        color: const Color.fromARGB(255, 114, 220, 118),
+                        barWidth: 2,
+                        isStrokeCapRound: true,
+                        dotData: const FlDotData(show: false),
+                        dashArray: [5, 5],
+                      ),
+                    ],
+                    minY: minY,
+                    maxY: (maxY + 2.5).roundToDouble(),
+                    minX: 0,
+                    maxX: maxX,
                   ),
                 ),
-                topTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                rightTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-              ),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: graphData,
-                  isCurved: false,
-                  color: lineColor,
-                  barWidth: 2,
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: lineColor.withOpacity(0.3),
-                  ),
-                ),
-                LineChartBarData(
-                  spots: [
-                    FlSpot(0, maxWeight * 0.2),
-                    FlSpot(maxX, maxWeight * 0.2),
-                  ],
-                  isCurved: false,
-                  color: const Color.fromARGB(255, 221, 110, 102),
-                  barWidth: 2,
-                  isStrokeCapRound: true,
-                  dotData: const FlDotData(show: false),
-                  dashArray: [5, 5],
-                ),
-                LineChartBarData(
-                  spots: [
-                    FlSpot(0, maxWeight * 0.8),
-                    FlSpot(maxX, maxWeight * 0.8),
-                  ],
-                  isCurved: false,
-                  color: const Color.fromARGB(255, 114, 220, 118),
-                  barWidth: 2,
-                  isStrokeCapRound: true,
-                  dotData: const FlDotData(show: false),
-                  dashArray: [5, 5],
-                ),
-              ],
-              minY: minY,
-              maxY: (maxY + 2.5).roundToDouble(),
-              minX: 0,
-              maxX: maxX,
-            ),
-          ),
         ),
       ],
     );

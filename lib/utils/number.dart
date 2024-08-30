@@ -40,3 +40,8 @@ double calculateMaxWeightFromJson(String graphData) {
   if (spots.isEmpty) return 0.0;
   return spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
 }
+
+double calculateMinWeightFromJson(String graphData) {
+  final List<dynamic> data = jsonDecode(graphData);
+  return data.map((item) => item['y'] as double).reduce((a, b) => a < b ? a : b);
+}

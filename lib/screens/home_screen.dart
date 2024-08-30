@@ -15,6 +15,7 @@ import 'package:ble_scale_app/widgets/leaderboard.dart';
 import 'package:ble_scale_app/widgets/weight_graph.dart';
 import 'package:ble_scale_app/screens/session_details_page.dart';
 import 'package:ble_scale_app/screens/saved_sessions_page.dart';
+import 'package:ble_scale_app/screens/insights_page.dart';
 import 'package:ble_scale_app/screens/leaderboard_page.dart';
 import 'package:ble_scale_app/utils/number.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'dart:math';
 import 'package:ble_scale_app/utils/email_utils.dart';
+
 class ScaleHomePage extends StatefulWidget {
   @override
   _ScaleHomePageState createState() => _ScaleHomePageState();
@@ -303,6 +305,18 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                   );
                 },
               ),
+            ListTile(
+              leading: Icon(Icons.insights),
+              title: Text('Insights'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InsightsPage(),
+                  ),
+                );
+              },
+            ),
             Divider(),
             ListTile(
               leading: Icon(Icons.brightness_6),
@@ -414,11 +428,6 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(
-                bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
-            child: WeightGraph(graphData: Provider.of<DynoDataProvider>(context, listen: false).graphData, weightUnit: Provider.of<DynoDataProvider>(context, listen: false).weightUnit),
-          ),
-          Padding(
             padding: const EdgeInsets.only(bottom: 24.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -445,6 +454,17 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.only(
+                bottom: 8.0, right: 8.0, left: 16.0, top: 0.0),
+            child: WeightGraph(
+                graphData: Provider.of<DynoDataProvider>(context, listen: false)
+                    .graphData,
+                weightUnit:
+                    Provider.of<DynoDataProvider>(context, listen: false)
+                        .weightUnit),
+          ),
+          
         ],
       ),
     );
