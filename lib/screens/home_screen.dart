@@ -1,28 +1,28 @@
-import 'package:ble_scale_app/providers/dyno_data_provider.dart';
-import 'package:ble_scale_app/widgets/dyno_data_display.dart';
-import 'package:ble_scale_app/widgets/gender_toggle.dart';
-import 'package:ble_scale_app/widgets/status_icon_bar.dart';
+import 'package:sesh_trainer/providers/dyno_data_provider.dart';
+import 'package:sesh_trainer/widgets/dyno_data_display.dart';
+import 'package:sesh_trainer/widgets/gender_toggle.dart';
+import 'package:sesh_trainer/widgets/status_icon_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
-import 'package:ble_scale_app/models/leaderboard_entry.dart';
-import 'package:ble_scale_app/models/info.dart';
-import 'package:ble_scale_app/providers/leaderboard_provider.dart';
-import 'package:ble_scale_app/providers/theme_provider.dart';
-import 'package:ble_scale_app/services/leaderboard_service.dart';
-import 'package:ble_scale_app/widgets/leaderboard.dart';
-import 'package:ble_scale_app/widgets/weight_graph.dart';
-import 'package:ble_scale_app/screens/session_details_page.dart';
-import 'package:ble_scale_app/screens/saved_sessions_page.dart';
-import 'package:ble_scale_app/screens/insights_page.dart';
-import 'package:ble_scale_app/screens/leaderboard_page.dart';
-import 'package:ble_scale_app/utils/number.dart';
+import 'package:sesh_trainer/models/leaderboard_entry.dart';
+import 'package:sesh_trainer/models/info.dart';
+import 'package:sesh_trainer/providers/leaderboard_provider.dart';
+import 'package:sesh_trainer/providers/theme_provider.dart';
+import 'package:sesh_trainer/services/leaderboard_service.dart';
+import 'package:sesh_trainer/widgets/leaderboard.dart';
+import 'package:sesh_trainer/widgets/weight_graph.dart';
+import 'package:sesh_trainer/screens/session_details_page.dart';
+import 'package:sesh_trainer/screens/saved_sessions_page.dart';
+import 'package:sesh_trainer/screens/insights_page.dart';
+import 'package:sesh_trainer/screens/leaderboard_page.dart';
+import 'package:sesh_trainer/utils/number.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'dart:math';
-import 'package:ble_scale_app/utils/email_utils.dart';
+import 'package:sesh_trainer/utils/email_utils.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class ScaleHomePage extends StatefulWidget {
@@ -192,8 +192,12 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                         0.0;
                     if (unit == Info.Pounds &&
                         dynoDataProvider.weightUnit == Info.Kilogram) {
+                      print("converting kg to pounds: ${maxWeight}");
+
                       maxWeight = convertKgToLbs(maxWeight);
                     }
+
+                    print("MaxWeight: ${maxWeight}");
                     final elapsedTime =
                         dynoDataProvider.stopwatch.elapsed.toString();
                     final averageWeight = unit == Info.Pounds
@@ -370,7 +374,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                   DynoDataDisplay(crossAxisCount: crossAxisCount),
                   if (showLeaderboard)
                     Expanded(
-                      flex: 3,
+                      flex: 1,
                       child: FutureBuilder(
                         future: _fetchLeaderboardData(),
                         builder: (context, snapshot) {
@@ -389,6 +393,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                 ],
               ),
             ),
+            StatusIconBar(),
           ] else ...[
             if (showLeaderboard)
               Flexible(
@@ -405,6 +410,8 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                   },
                 ),
               ),
+            DynoDataDisplay(crossAxisCount: crossAxisCount),
+            StatusIconBar(),
           ],
           Padding(
             padding: const EdgeInsets.only(
@@ -468,6 +475,25 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                         horizontal: 10, vertical: 10),
                   ),
                 ),
+                if (showLeaderboard)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 0.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            _addToLeaderboard(context);
+                          },
+                          child: const Text('Add to Leaderboard'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 10),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (showTestButton) // Feature gate for the test button
                   ElevatedButton(
                     onPressed: _runTestSession,
@@ -480,27 +506,6 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
               ],
             ),
           ),
-          if (showLeaderboard)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 0.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      _addToLeaderboard(context);
-                    },
-                    child: const Text('Add to Leaderboard'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 10),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          DynoDataDisplay(crossAxisCount: crossAxisCount),
-          StatusIconBar(),
         ],
       ),
     );

@@ -1,4 +1,4 @@
-import 'package:ble_scale_app/providers/dyno_data_provider.dart';
+import 'package:sesh_trainer/providers/dyno_data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'screens/home_screen.dart';

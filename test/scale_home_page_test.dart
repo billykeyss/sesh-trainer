@@ -1,7 +1,7 @@
 // import 'package:flutter/material.dart';
 // import 'package:flutter_test/flutter_test.dart';
 // import 'package:mockito/mockito.dart';
-// import 'package:ble_scale_app/screens/home_screen.dart';
+// import 'package:sesh_trainer/screens/home_screen.dart';
 // import 'package:flutter_blue/flutter_blue.dart';
 // import 'package:permission_handler/permission_handler.dart';
 

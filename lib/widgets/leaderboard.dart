@@ -94,7 +94,7 @@ class Leaderboard extends StatelessWidget {
     String weightUnit, // Add weightUnit parameter
     Color? backgroundColor,
   ) {
-    final topEntries = isPreviewMode ? entries.take(3).toList() : entries;
+    final topEntries = isPreviewMode ? entries.take(5).toList() : entries;
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 
@@ -119,7 +119,7 @@ class Leaderboard extends StatelessWidget {
             padding: const EdgeInsets.all(12.0),
             child: Center(
               child: Text(
-                '$title Top ${isPreviewMode ? 3 : entries.length}',
+                '$title Top ${isPreviewMode ? 5 : entries.length}',
                 style: TextStyle(
                   fontSize: 20, 
                   fontWeight: FontWeight.bold, 
@@ -137,7 +137,7 @@ class Leaderboard extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final entry = topEntries[index];
-                double adjustedWeight = weightUnit == Info.Pounds ? convertKgToLbs(entry.maxWeight) : entry.maxWeight;
+                double adjustedWeight = weightUnit == Info.Pounds ? entry.maxWeight : convertLbsToKg(entry.maxWeight);
                 String unitLabel = weightUnit == Info.Pounds ? Info.Pounds : Info.Kilogram;
 
                 return ListTile(

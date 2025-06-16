@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ble_scale_app/widgets/leaderboard.dart'; // Update with the correct path
+import 'package:sesh_trainer/widgets/leaderboard.dart'; // Update with the correct path
 
 class LeaderboardPage extends StatefulWidget {
   @override

@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:ble_scale_app/widgets/weight_graph.dart';
+import 'package:sesh_trainer/widgets/weight_graph.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +15,7 @@ import '../database/session_database.dart';
 import '../models/info.dart';
 import 'package:drift/drift.dart' as drift;
 import '../providers/theme_provider.dart';
-import 'package:ble_scale_app/utils/number.dart';
+import 'package:sesh_trainer/utils/number.dart';
 
 class SessionDetailsPage extends StatefulWidget {
   final List<FlSpot> graphData;

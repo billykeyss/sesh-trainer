@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart'; // Import Provider
 import '../providers/theme_provider.dart'; // Import ThemeProvider
-import 'package:ble_scale_app/utils/number.dart';
+import 'package:sesh_trainer/utils/number.dart';
 import '../models/info.dart';
 
 class WeightGraph extends StatelessWidget {

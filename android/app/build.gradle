@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace = "com.sesh.dyno_trainer"
+    namespace = "com.sesh.trainer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -34,7 +34,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sesh.dyno_trainer"
+        applicationId = "com.sesh.trainer"
         minSdkVersion 21 // Set the minimum SDK version here
         targetSdk = flutter.targetSdkVersion
         versionCode = flutterVersionCode.toInteger()

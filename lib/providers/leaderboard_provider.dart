@@ -29,9 +29,14 @@ class LeaderboardProvider extends ChangeNotifier {
   }
 
   Future<List<LeaderboardEntry>> _fetchEntries(String gender, bool isDaily) async {
-    return isDaily
+    final entries = isDaily
         ? await LeaderboardService().getDailyEntries(gender)
         : await LeaderboardService().getAllEntries(gender);
+    
+    // Sort the entries by maxWeight in descending order
+    entries.sort((a, b) => b.maxWeight.compareTo(a.maxWeight));
+    
+    return entries;
   }
 
   bool _entriesHaveChanged(List<LeaderboardEntry> maleEntries, List<LeaderboardEntry> femaleEntries) {
