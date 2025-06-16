@@ -58,7 +58,7 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
       await _database.deleteSession(session.id);
       _loadSavedSessions();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Session deleted')),
+        SnackBar(content: Text('Training session deleted')),
       );
     }
   }
@@ -70,10 +70,13 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Rename Session'),
+          title: const Text('Rename Training Session'),
           content: TextField(
             controller: newNameController,
-            decoration: const InputDecoration(labelText: 'New Name'),
+            decoration: const InputDecoration(
+              labelText: 'Session Name',
+              border: OutlineInputBorder(),
+            ),
           ),
           actions: [
             TextButton(
@@ -84,7 +87,7 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
             ),
             TextButton(
               onPressed: () async {
-                final newName = newNameController.text;
+                final newName = newNameController.text.trim();
                 if (newName.isNotEmpty) {
                   await _database.updateSession(
                     session.copyWith(name: newName),
@@ -106,8 +109,9 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
           context: context,
           builder: (context) {
             return AlertDialog(
-              title: Text('Delete Session'),
-              content: Text('Are you sure you want to delete this session?'),
+              title: Text('Delete Training Session'),
+              content: Text(
+                  'Are you sure you want to delete this training session? This action cannot be undone.'),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -120,6 +124,9 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
                     Navigator.of(context).pop(true);
                   },
                   child: Text('Delete'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
                 ),
               ],
             );
@@ -132,7 +139,7 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Saved Sessions'),
+        title: const Text('Training History'),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
@@ -146,13 +153,32 @@ class _SavedSessionsPageState extends State<SavedSessionsPage> {
 
           return savedSessions.isEmpty
               ? Center(
-                  child: Text(
-                    'No sessions yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.history,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No training sessions yet',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Start training to see your sessions here',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
                 )
               : SessionList(

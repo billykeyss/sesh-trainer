@@ -8,7 +8,6 @@ import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import '../utils/number.dart';
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:math';
 import '../database/session_database.dart';
@@ -46,7 +45,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     super.initState();
     _database = SessionDatabase();
     _nameController.text = widget.sessionName;
-    _checkAndSaveSession(); // Automatically save the session on page load
+    _checkAndSaveSession();
   }
 
   void _checkAndSaveSession() async {
@@ -129,8 +128,11 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     final isDarkMode = theme.brightness == Brightness.dark;
     final textColor = isDarkMode ? Colors.white : Colors.black;
     final backgroundColor = isDarkMode ? Colors.grey[850] : Colors.white;
-    final Color cardColor = isDarkMode ? Colors.grey[800] ?? Colors.grey : Colors.white;
-    final shadowColor = isDarkMode ? Colors.black.withOpacity(0.1) : Colors.black.withOpacity(0.2);
+    final Color cardColor =
+        isDarkMode ? Colors.grey[800] ?? Colors.grey : Colors.white;
+    final shadowColor = isDarkMode
+        ? Colors.black.withOpacity(0.1)
+        : Colors.black.withOpacity(0.2);
 
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
@@ -138,9 +140,11 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
         // Convert graph data to selected unit if necessary
         List<FlSpot> convertedGraphData = widget.graphData.map((spot) {
           double yValue = spot.y;
-          if (selectedUnit == Info.Pounds && widget.weightUnit == Info.Kilogram) {
+          if (selectedUnit == Info.Pounds &&
+              widget.weightUnit == Info.Kilogram) {
             yValue = convertKgToLbs(yValue);
-          } else if (selectedUnit == Info.Kilogram && widget.weightUnit == Info.Pounds) {
+          } else if (selectedUnit == Info.Kilogram &&
+              widget.weightUnit == Info.Pounds) {
             yValue = convertLbsToKg(yValue);
           }
           return FlSpot(spot.x, yValue);
@@ -158,17 +162,17 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                 border: InputBorder.none,
               ),
               style: TextStyle(
-                color: textColor, // Dynamic text color
+                color: textColor,
                 fontSize: 20.0,
                 fontWeight: FontWeight.bold,
               ),
               onSubmitted: (newName) {
                 if (newName.isNotEmpty) {
-                  _renameSession(context, newName); // Call rename function
+                  _renameSession(context, newName);
                 }
               },
             ),
-            backgroundColor: theme.appBarTheme.backgroundColor, // Adjust for dark mode
+            backgroundColor: theme.appBarTheme.backgroundColor,
             actions: [
               IconButton(
                 icon: Icon(Icons.share, color: textColor),
@@ -185,12 +189,12 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                   children: [
                     // Graph Widget
                     Card(
-                      color: cardColor, // Adjust card color for dark mode
+                      color: cardColor,
                       elevation: 4.0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
                       ),
-                      shadowColor: shadowColor, // Adjust shadow color for dark mode
+                      shadowColor: shadowColor,
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: WeightGraph(
@@ -200,7 +204,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                       ),
                     ),
                     const SizedBox(height: 16.0),
-                    // ListTiles with enhanced UI
+                    // Session Details
                     _buildDetailCard(
                       title: 'Session Time',
                       trailing:
@@ -219,8 +223,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                     ),
                     _buildDetailCard(
                       title: 'Max Pull',
-                      trailing:
-                          '${maxWeight.toStringAsFixed(2)} $selectedUnit',
+                      trailing: '${maxWeight.toStringAsFixed(2)} $selectedUnit',
                       textColor: textColor,
                       cardColor: cardColor,
                       shadowColor: shadowColor,
@@ -270,7 +273,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
               ),
             ),
           ),
-          backgroundColor: backgroundColor, // Set background for dark mode
+          backgroundColor: backgroundColor,
         );
       },
     );
@@ -284,29 +287,26 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     required Color shadowColor,
   }) {
     return Card(
-      color: cardColor, // Adjust card color for dark mode
+      color: cardColor,
       elevation: 4.0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),
       ),
-      shadowColor: shadowColor, // Adjust shadow color for dark mode
+      shadowColor: shadowColor,
       child: ListTile(
         contentPadding: EdgeInsets.all(8.0),
         title: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 8.0), // Added horizontal padding
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Text(
             title,
-            style: TextStyle(fontSize: 18.0, color: textColor), // Increased font size for title and color
+            style: TextStyle(fontSize: 18.0, color: textColor),
           ),
         ),
         trailing: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 8.0), // Added horizontal padding
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Text(
             trailing,
-            style: TextStyle(
-                fontSize: 16.0, color: textColor), // Increased font size for trailing text and color
+            style: TextStyle(fontSize: 16.0, color: textColor),
           ),
         ),
       ),
@@ -317,7 +317,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     try {
       final newSession = SessionsCompanion(
         name: drift.Value(name),
-        email: drift.Value(''), // Provide default or empty value
+        email: drift.Value(''), // Keep empty for personal training
         elapsedTimeMs: drift.Value(widget.elapsedTimeMs),
         weightUnit: drift.Value(widget.weightUnit),
         sessionTime: drift.Value(widget.sessionStartTime),
@@ -375,7 +375,8 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
       final imageFile = File(imagePath);
       await imageFile.writeAsBytes(screenshot);
 
-      await Share.shareXFiles([XFile(imagePath)]);
+      await Share.shareXFiles([XFile(imagePath)],
+          text: 'Check out my climbing training session!');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

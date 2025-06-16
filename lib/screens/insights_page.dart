@@ -3,7 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../database/session_database.dart';
 import '../widgets/weight_graph.dart';
 import '../utils/number.dart';
-import '../widgets/display_card.dart'; // Import the DisplayCard widget
+import '../widgets/display_card.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/info.dart';
@@ -37,7 +37,7 @@ class _InsightsPageState extends State<InsightsPage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading sessions: $e'),
+          content: Text('Error loading training data: $e'),
         ),
       );
     }
@@ -51,7 +51,7 @@ class _InsightsPageState extends State<InsightsPage> {
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Insights'),
+          title: Text('Progress & Insights'),
         ),
         body: Center(
           child: CircularProgressIndicator(),
@@ -62,37 +62,96 @@ class _InsightsPageState extends State<InsightsPage> {
     if (sessions.isEmpty) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Insights'),
+          title: Text('Progress & Insights'),
         ),
         body: Center(
-          child: Text(
-            'No sessions available',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.insights,
+                size: 64,
+                color: Colors.grey,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'No training data available',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Complete some training sessions to see your progress',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       );
     }
 
-    // Calculate aggregates and convert to selected unit
+    // Calculate aggregated training data
     final totalSessions = sessions.length;
-    final totalDuration = sessions.map((s) => s.elapsedTimeMs).reduce((a, b) => a + b);
+    final totalDuration =
+        sessions.map((s) => s.elapsedTimeMs).reduce((a, b) => a + b);
 
-    // Aggregate weight calculations
-    final weightsInKg = sessions.map((s) => calculateMaxWeightFromJson(s.graphData)).toList();
+    // Calculate weight statistics
+    final weightsInKg =
+        sessions.map((s) => calculateMaxWeightFromJson(s.graphData)).toList();
     final convertedWeights = weightsInKg.map((weight) {
       return selectedUnit == Info.Pounds ? convertKgToLbs(weight) : weight;
     }).toList();
 
-    final averageMaxWeight = convertedWeights.reduce((a, b) => a + b) / totalSessions;
-    final heaviestPull = convertedWeights.reduce((a, b) => a > b ? a : b);
-    final lightestPull = convertedWeights.reduce((a, b) => a < b ? a : b);
+    final averageMaxWeight =
+        convertedWeights.reduce((a, b) => a + b) / totalSessions;
+    final bestPull = convertedWeights.reduce((a, b) => a > b ? a : b);
+    final lowestPull = convertedWeights.reduce((a, b) => a < b ? a : b);
 
-    // Prepare graph data for max weight timeline
+    // Calculate recent performance (last 5 sessions vs previous 5)
+    String progressTrend = 'No data';
+    if (sessions.length >= 2) {
+      final recentSessions = sessions.take(5).toList();
+      final recentAvg = recentSessions
+              .map((s) => calculateMaxWeightFromJson(s.graphData))
+              .map((weight) =>
+                  selectedUnit == Info.Pounds ? convertKgToLbs(weight) : weight)
+              .reduce((a, b) => a + b) /
+          recentSessions.length;
+
+      if (sessions.length >= 6) {
+        final previousSessions = sessions.skip(5).take(5).toList();
+        final previousAvg = previousSessions
+                .map((s) => calculateMaxWeightFromJson(s.graphData))
+                .map((weight) => selectedUnit == Info.Pounds
+                    ? convertKgToLbs(weight)
+                    : weight)
+                .reduce((a, b) => a + b) /
+            previousSessions.length;
+
+        final improvement = recentAvg - previousAvg;
+        progressTrend = improvement > 0
+            ? '+${improvement.toStringAsFixed(1)} $selectedUnit'
+            : '${improvement.toStringAsFixed(1)} $selectedUnit';
+      } else {
+        progressTrend = 'Need more data';
+      }
+    }
+
+    // Prepare graph data for progress timeline
     final timelineData = _getTimelineData(sessions, selectedUnit);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Insights'),
+        title: Text('Progress & Insights'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadSessions,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -100,21 +159,53 @@ class _InsightsPageState extends State<InsightsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Max Weight Timeline',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'Training Progress',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            SizedBox(
-              child: WeightGraph(
-                graphData: timelineData,
-                weightUnit: selectedUnit,
+            SizedBox(height: 8),
+            Text(
+              'Track your climbing strength over time',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+            SizedBox(height: 16),
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Max Pull Over Time',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(height: 16),
+                    SizedBox(
+                      height: 200,
+                      child: WeightGraph(
+                        graphData: timelineData,
+                        weightUnit: selectedUnit,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+            SizedBox(height: 20),
+            Text(
+              'Training Statistics',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16),
             GridView.count(
               crossAxisCount: 2,
-              childAspectRatio: 1,
-              padding: const EdgeInsets.all(8.0),
+              childAspectRatio: 1.2,
+              padding: const EdgeInsets.all(0),
               physics: NeverScrollableScrollPhysics(),
               shrinkWrap: true,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
               children: [
                 DisplayCard(
                   title: 'Total Sessions',
@@ -122,23 +213,28 @@ class _InsightsPageState extends State<InsightsPage> {
                   unit: '',
                 ),
                 DisplayCard(
-                  title: 'Total Duration',
+                  title: 'Training Time',
                   value: formatElapsedTimeIntToString(totalDuration),
                   unit: '',
                 ),
                 DisplayCard(
-                  title: 'Average Max Weight',
-                  value: '${averageMaxWeight.toStringAsFixed(2)}',
+                  title: 'Personal Best',
+                  value: '${bestPull.toStringAsFixed(1)}',
                   unit: selectedUnit,
                 ),
                 DisplayCard(
-                  title: 'Heaviest Pull',
-                  value: '${heaviestPull.toStringAsFixed(2)}',
+                  title: 'Average Max',
+                  value: '${averageMaxWeight.toStringAsFixed(1)}',
                   unit: selectedUnit,
                 ),
                 DisplayCard(
-                  title: 'Lightest Pull',
-                  value: '${lightestPull.toStringAsFixed(2)}',
+                  title: 'Recent Trend',
+                  value: progressTrend,
+                  unit: '',
+                ),
+                DisplayCard(
+                  title: 'Range',
+                  value: '${(bestPull - lowestPull).toStringAsFixed(1)}',
                   unit: selectedUnit,
                 ),
               ],
@@ -151,6 +247,7 @@ class _InsightsPageState extends State<InsightsPage> {
 
   List<FlSpot> _getTimelineData(List<Session> sessions, String unit) {
     List<FlSpot> spots = [];
+    // Sort by session time to show chronological progress
     sessions.sort((a, b) => a.sessionTime.compareTo(b.sessionTime));
     for (int i = 0; i < sessions.length; i++) {
       double maxWeight = calculateMaxWeightFromJson(sessions[i].graphData);

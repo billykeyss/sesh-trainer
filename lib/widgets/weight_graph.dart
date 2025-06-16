@@ -16,14 +16,18 @@ class WeightGraph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Accessing the current theme
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
-    final gridColor = isDarkMode ? Colors.white : Colors.grey;
-    final lineColor = isDarkMode ? Colors.white : Colors.black;
 
-    // Listening to ThemeProvider for unit changes
+    // Modern color scheme
+    final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.grey[50];
+    final cardColor = isDarkMode ? Colors.grey[850] : Colors.white;
+    final primaryColor = Colors.blue;
+    final accentColor = Colors.purple;
+    final textColor = isDarkMode ? Colors.white : Colors.grey[800];
+    final subtitleColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
+    final gridColor = isDarkMode ? Colors.grey[700] : Colors.grey[300];
+
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         String selectedUnit = themeProvider.unit;
@@ -40,7 +44,7 @@ class WeightGraph extends StatelessWidget {
           return FlSpot(spot.x, yValue);
         }).toList();
 
-        // Calculate maxWeight from the converted graphData
+        // Calculate chart bounds
         double maxWeight = convertedGraphData.isNotEmpty
             ? convertedGraphData
                 .map((spot) => spot.y)
@@ -48,161 +52,315 @@ class WeightGraph extends StatelessWidget {
             : 0.0;
 
         double minY = 0;
-        double maxY = 5;
-
-        if (convertedGraphData.isNotEmpty) {
-          double dataMaxY = convertedGraphData
-              .map((spot) => spot.y)
-              .reduce((a, b) => a > b ? a : b);
-          maxY = dataMaxY > 5 ? dataMaxY : 5; // Ensure maxY is at least 5
-        }
-
+        double maxY = maxWeight > 5 ? maxWeight * 1.1 : 5;
         double maxX = convertedGraphData.isNotEmpty
             ? roundToNearest10(convertedGraphData.last.x + 5)
-            : 10.0; // Ensure there's a default value that's a multiple of 10
+            : 10.0;
 
-        double interval = (maxX - 0) / 10;
-        double chartHeight = 200.0; // The height of the chart (from SizedBox)
-        double chartWidth = 800.0;
+        // Calculate performance zones
+        double zone1 = maxWeight * 0.2; // Light effort
+        double zone2 = maxWeight * 0.6; // Moderate effort
+        double zone3 = maxWeight * 0.8; // High effort
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(
-                  bottom: 8.0, top: 4.0), // Add bottom padding
-              child: Text(
-                'Weight vs. Time', // Graph Title
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+        return Container(
+          margin: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryColor.withOpacity(0.2),
+                            accentColor.withOpacity(0.1)
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.show_chart,
+                        color: primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Force Over Time',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          Text(
+                            convertedGraphData.isNotEmpty
+                                ? 'Peak: ${maxWeight.toStringAsFixed(1)} $selectedUnit'
+                                : 'No data recorded',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: subtitleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            SizedBox(
-              height: chartHeight,
-              width: chartWidth,
-              child: Stack(
-                children: [
-                  LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: true,
-                        getDrawingHorizontalLine: (value) {
-                          return FlLine(color: gridColor, strokeWidth: 0.5);
-                        },
-                        getDrawingVerticalLine: (value) {
-                          return FlLine(color: gridColor, strokeWidth: 0.5);
-                        },
-                      ),
-                      borderData: FlBorderData(
-                          show: true,
-                          border: Border.all(color: gridColor, width: 1)),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              return SideTitleWidget(
-                                axisSide: meta.axisSide,
-                                child: Text(
-                                  value.toInt().toString(),
-                                  style:
-                                      TextStyle(fontSize: 14, color: textColor),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            interval: interval,
-                            getTitlesWidget: (value, meta) {
-                              return SideTitleWidget(
-                                axisSide: meta.axisSide,
-                                child: Text(
-                                  value.toInt().toString(),
-                                  style:
-                                      TextStyle(fontSize: 14, color: textColor),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: convertedGraphData,
-                          isCurved: false,
-                          color: lineColor,
-                          barWidth: 2,
-                          belowBarData: BarAreaData(
+
+              // Chart
+              Container(
+                height: 280,
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: convertedGraphData.isEmpty
+                    ? _buildEmptyState(context, isDarkMode)
+                    : LineChart(
+                        LineChartData(
+                          gridData: FlGridData(
                             show: true,
-                            color: lineColor.withOpacity(0.3),
+                            drawVerticalLine: true,
+                            horizontalInterval: maxY / 5,
+                            verticalInterval: maxX / 8,
+                            getDrawingHorizontalLine: (value) => FlLine(
+                              color: gridColor?.withOpacity(0.3) ??
+                                  Colors.grey.withOpacity(0.3),
+                              strokeWidth: 1,
+                            ),
+                            getDrawingVerticalLine: (value) => FlLine(
+                              color: gridColor?.withOpacity(0.3) ??
+                                  Colors.grey.withOpacity(0.3),
+                              strokeWidth: 1,
+                            ),
                           ),
-                        ),
-                        LineChartBarData(
-                          spots: [
-                            FlSpot(0, maxWeight * 0.2),
-                            FlSpot(maxX, maxWeight * 0.2),
+                          borderData: FlBorderData(show: false),
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 50,
+                                interval: maxY / 5,
+                                getTitlesWidget: (value, meta) => Padding(
+                                  padding: EdgeInsets.only(right: 8),
+                                  child: Text(
+                                    value.toInt().toString(),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: subtitleColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 30,
+                                interval: maxX / 6,
+                                getTitlesWidget: (value, meta) => Padding(
+                                  padding: EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    '${value.toInt()}s',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: subtitleColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            topTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                            rightTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                          ),
+                          lineBarsData: [
+                            // Performance zones (background)
+                            if (maxWeight > 0) ...[
+                              _buildZoneLine(0, zone1, maxX,
+                                  Colors.green.withOpacity(0.1)),
+                              _buildZoneLine(zone1, zone2, maxX,
+                                  Colors.yellow.withOpacity(0.1)),
+                              _buildZoneLine(zone2, zone3, maxX,
+                                  Colors.orange.withOpacity(0.1)),
+                              _buildZoneLine(zone3, maxY, maxX,
+                                  Colors.red.withOpacity(0.1)),
+                            ],
+
+                            // Main data line
+                            LineChartBarData(
+                              spots: convertedGraphData,
+                              isCurved: true,
+                              curveSmoothness: 0.3,
+                              gradient: LinearGradient(
+                                colors: [primaryColor, accentColor],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              barWidth: 3,
+                              isStrokeCapRound: true,
+                              dotData: FlDotData(
+                                show: convertedGraphData.length < 50,
+                                getDotPainter:
+                                    (spot, percent, barData, index) =>
+                                        FlDotCirclePainter(
+                                  radius: 3,
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                  strokeColor: primaryColor,
+                                ),
+                              ),
+                              belowBarData: BarAreaData(
+                                show: true,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    primaryColor.withOpacity(0.3),
+                                    accentColor.withOpacity(0.1),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                            ),
                           ],
-                          isCurved: false,
-                          color: const Color.fromARGB(255, 221, 110, 102),
-                          barWidth: 2,
-                          isStrokeCapRound: true,
-                          dotData: const FlDotData(show: false),
-                          dashArray: [5, 5],
-                        ),
-                        LineChartBarData(
-                          spots: [
-                            FlSpot(0, maxWeight * 0.8),
-                            FlSpot(maxX, maxWeight * 0.8),
-                          ],
-                          isCurved: false,
-                          color: const Color.fromARGB(255, 114, 220, 118),
-                          barWidth: 2,
-                          isStrokeCapRound: true,
-                          dotData: const FlDotData(show: false),
-                          dashArray: [5, 5],
-                        ),
-                      ],
-                      minY: minY,
-                      maxY: (maxY + 2.5).roundToDouble(),
-                      minX: 0,
-                      maxX: maxX,
-                    ),
-                  ),
-                  if (convertedGraphData.isEmpty) // Overlay text when no data
-                    Center(
-                      child: Container(
-                        color: Colors.black
-                            .withOpacity(0.5), // Semi-transparent background
-                        child: Text(
-                          'No data available',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold),
+                          minY: minY,
+                          maxY: maxY,
+                          minX: 0,
+                          maxX: maxX,
                         ),
                       ),
-                    ),
-                ],
               ),
-            ),
-          ],
+
+              // Legend/Info bar
+              if (convertedGraphData.isNotEmpty)
+                Container(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildLegendItem('Duration', '${maxX.toInt()}s',
+                          Icons.timer, Colors.blue),
+                      _buildLegendItem(
+                          'Peak',
+                          '${maxWeight.toStringAsFixed(1)}',
+                          Icons.trending_up,
+                          Colors.orange),
+                      _buildLegendItem('Unit', selectedUnit,
+                          Icons.fitness_center, Colors.green),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, bool isDarkMode) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(
+              Icons.show_chart,
+              size: 48,
+              color: Colors.grey,
+            ),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'No Training Data',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Start a session to see your force curve',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(
+      String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 16),
+        SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  LineChartBarData _buildZoneLine(
+      double startY, double endY, double maxX, Color color) {
+    return LineChartBarData(
+      spots: [
+        FlSpot(0, startY),
+        FlSpot(maxX, startY),
+        FlSpot(maxX, endY),
+        FlSpot(0, endY),
+        FlSpot(0, startY),
+      ],
+      isCurved: false,
+      color: Colors.transparent,
+      barWidth: 0,
+      dotData: FlDotData(show: false),
+      belowBarData: BarAreaData(
+        show: true,
+        color: color,
+      ),
     );
   }
 }
