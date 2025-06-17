@@ -12,6 +12,9 @@ import 'package:sesh_trainer/providers/dyno_data_provider.dart';
 import 'package:sesh_trainer/providers/theme_provider.dart';
 import 'package:sesh_trainer/widgets/weight_graph.dart';
 
+// New enum to differentiate between training types
+enum CircuitSessionType { pull, hangboard }
+
 class CircuitTrainingScreen extends StatefulWidget {
   const CircuitTrainingScreen({Key? key}) : super(key: key);
 
@@ -32,6 +35,15 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
   List<CircuitData> circuitSessions = [];
   DateTime? sessionStartTime;
   late final SessionDatabase _database;
+
+  // === New variables for Hangboard support and countdown ===
+  CircuitSessionType sessionType = CircuitSessionType.pull;
+  int pullEdge = 20; // Edge size in mm for hangboard
+
+  // Small countdown before each phase (pull/rest)
+  static const int _preCountdownSeconds = 3;
+  bool isCountdown = false;
+  int countdownTime = 0;
 
   @override
   void initState() {
@@ -59,12 +71,17 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
       circuitSessions = [];
       sessionStartTime = DateTime.now();
       isPullPhase = true;
-      currentTime = pullDuration;
+      // Start with a short countdown before the first pull/hold begins
+      isCountdown = true;
+      countdownTime = _preCountdownSeconds;
+      currentTime = 0;
     });
 
     final dynoProvider = Provider.of<DynoDataProvider>(context, listen: false);
-    dynoProvider.resetData();
-    dynoProvider.startData();
+    // Only reset / start data when using the pull (scale) mode.
+    if (sessionType == CircuitSessionType.pull) {
+      dynoProvider.resetData();
+    }
     _startTimer();
   }
 
@@ -74,7 +91,9 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
       isRunning = false;
     });
     final dynoProvider = Provider.of<DynoDataProvider>(context, listen: false);
-    dynoProvider.stopData();
+    if (sessionType == CircuitSessionType.pull) {
+      dynoProvider.stopData();
+    }
 
     if (isComplete && sessionStartTime != null) {
       _saveCircuitSession();
@@ -91,48 +110,81 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
       sessionStartTime = null;
       isPullPhase = true;
       currentTime = 0;
+      isCountdown = false;
+      countdownTime = 0;
     });
-    Provider.of<DynoDataProvider>(context, listen: false).resetData();
+    if (sessionType == CircuitSessionType.pull) {
+      Provider.of<DynoDataProvider>(context, listen: false).resetData();
+    }
   }
 
   void _startTimer() {
     final dynoProvider = Provider.of<DynoDataProvider>(context, listen: false);
 
-    timer = Timer.periodic(Duration(seconds: 1), (timer) {
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
+        // Handle pre-phase countdown
+        if (isCountdown) {
+          if (countdownTime > 0) {
+            countdownTime--;
+          } else {
+            // Countdown finished – start the actual phase timer
+            isCountdown = false;
+
+            // Start data collection only for pull mode during pull phase
+            if (sessionType == CircuitSessionType.pull && isPullPhase) {
+              dynoProvider.startData();
+            }
+
+            currentTime = isPullPhase ? pullDuration : restDuration;
+          }
+          return; // Skip the rest while in countdown
+        }
+
+        // Handle active phase timing
         if (currentTime > 0) {
           currentTime--;
-        } else {
-          if (isPullPhase) {
-            // End of pull phase - capture session data
-            final maxWeight =
-                dynoProvider.maxWeights[dynoProvider.weightUnit] ?? 0;
+          return;
+        }
+
+        // Phase finished – clean-up / transition
+        if (isPullPhase) {
+          // End of pull or hold phase
+          double maxWeight = 0.0;
+          List<FlSpot> graph = [];
+          if (sessionType == CircuitSessionType.pull) {
+            maxWeight = dynoProvider.maxWeights[dynoProvider.weightUnit] ?? 0;
+            graph = List.from(dynoProvider.graphData);
             maxWeights.add(maxWeight);
-
-            // Save circuit session data
-            circuitSessions.add(CircuitData(
-              circuitNumber: currentCircuit + 1,
-              maxWeight: maxWeight,
-              graphData: List.from(dynoProvider.graphData),
-              duration: pullDuration,
-            ));
-
-            // Reset for rest phase
+            // Reset data for next phase
             dynoProvider.resetData();
-            isPullPhase = false;
-            currentTime = restDuration;
-          } else {
-            // End of rest phase
-            currentCircuit++;
-            if (currentCircuit >= numCircuits) {
-              stopCircuit(isComplete: true);
-              return;
-            }
-            // Start new pull phase
-            dynoProvider.startData();
-            isPullPhase = true;
-            currentTime = pullDuration;
           }
+
+          circuitSessions.add(CircuitData(
+            circuitNumber: currentCircuit + 1,
+            maxWeight: maxWeight,
+            graphData: graph,
+            duration: pullDuration,
+          ));
+
+          isPullPhase = false;
+        } else {
+          // End of rest phase – advance circuit counter
+          currentCircuit++;
+          if (currentCircuit >= numCircuits) {
+            stopCircuit(isComplete: true);
+            return;
+          }
+          isPullPhase = true;
+        }
+
+        // Prepare for next phase with a countdown
+        isCountdown = true;
+        countdownTime = _preCountdownSeconds;
+
+        // Stop recording during rest for pull mode
+        if (sessionType == CircuitSessionType.pull && !isPullPhase) {
+          dynoProvider.stopData();
         }
       });
     });
@@ -171,10 +223,13 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
             .toList())),
         data: drift.Value(jsonEncode({
           'type': 'circuit_training',
+          'sessionType':
+              sessionType == CircuitSessionType.pull ? 'pull' : 'hangboard',
           'pullDuration': pullDuration,
           'restDuration': restDuration,
           'numCircuits': numCircuits,
           'maxWeights': maxWeights,
+          if (sessionType == CircuitSessionType.hangboard) 'edge': pullEdge,
         })),
       );
 
@@ -232,9 +287,17 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
-              if (maxWeights.isNotEmpty)
+              if (sessionType == CircuitSessionType.pull &&
+                  maxWeights.isNotEmpty)
                 Text(
                   'Best pull: ${maxWeights.reduce((a, b) => a > b ? a : b).toStringAsFixed(1)} kg',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              if (sessionType == CircuitSessionType.hangboard)
+                Text(
+                  'Edge Size: ${pullEdge} mm',
                   style: TextStyle(
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                   ),
@@ -335,26 +398,30 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
                   ],
                 ),
                 child: isRunning
-                    ? Consumer<DynoDataProvider>(
-                        builder: (context, dynoDataProvider, child) {
-                          final graphData =
-                              dynoDataProvider.graphData.map((spot) {
-                            double convertedWeight = spot.y;
-                            if (selectedUnit == Info.Pounds &&
-                                dynoDataProvider.weightUnit == Info.Kilogram) {
-                              convertedWeight = convertKgToLbs(spot.y);
-                            } else if (selectedUnit == Info.Kilogram &&
-                                dynoDataProvider.weightUnit == Info.Pounds) {
-                              convertedWeight = convertLbsToKg(spot.y);
-                            }
-                            return FlSpot(spot.x, convertedWeight);
-                          }).toList();
-                          return WeightGraph(
-                            graphData: graphData,
-                            weightUnit: selectedUnit,
-                          );
-                        },
-                      )
+                    ? (sessionType == CircuitSessionType.pull
+                        ? Consumer<DynoDataProvider>(
+                            builder: (context, dynoDataProvider, child) {
+                              final graphData =
+                                  dynoDataProvider.graphData.map((spot) {
+                                double convertedWeight = spot.y;
+                                if (selectedUnit == Info.Pounds &&
+                                    dynoDataProvider.weightUnit ==
+                                        Info.Kilogram) {
+                                  convertedWeight = convertKgToLbs(spot.y);
+                                } else if (selectedUnit == Info.Kilogram &&
+                                    dynoDataProvider.weightUnit ==
+                                        Info.Pounds) {
+                                  convertedWeight = convertLbsToKg(spot.y);
+                                }
+                                return FlSpot(spot.x, convertedWeight);
+                              }).toList();
+                              return WeightGraph(
+                                graphData: graphData,
+                                weightUnit: selectedUnit,
+                              );
+                            },
+                          )
+                        : _buildHangboardPlaceholder(isDarkMode))
                     : _buildConfigurationSection(isDarkMode),
               ),
             ),
@@ -528,8 +595,12 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
             Expanded(
               child: _buildMetricCard(
                 context,
-                isPullPhase ? 'Pull Time' : 'Rest Time',
-                '$currentTime',
+                isCountdown
+                    ? 'Starting In'
+                    : (sessionType == CircuitSessionType.pull
+                        ? (isPullPhase ? 'Pull Time' : 'Rest Time')
+                        : (isPullPhase ? 'Hold Time' : 'Rest Time')),
+                isCountdown ? '$countdownTime' : '$currentTime',
                 's',
                 isPullPhase ? Icons.fitness_center : Icons.pause,
                 isPullPhase ? Colors.blue : Colors.orange,
@@ -548,7 +619,9 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
         Expanded(
           child: _buildMetricCard(
             context,
-            'Pull Duration',
+            sessionType == CircuitSessionType.pull
+                ? 'Pull Duration'
+                : 'Hold Duration',
             '$pullDuration',
             's',
             Icons.fitness_center,
@@ -702,9 +775,37 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
           ),
           SizedBox(height: 16),
 
+          // Session type selector
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ChoiceChip(
+                label: Text('Pull'),
+                selected: sessionType == CircuitSessionType.pull,
+                onSelected: (selected) {
+                  if (selected)
+                    setState(() => sessionType = CircuitSessionType.pull);
+                },
+              ),
+              SizedBox(width: 8),
+              ChoiceChip(
+                label: Text('Hangboard'),
+                selected: sessionType == CircuitSessionType.hangboard,
+                onSelected: (selected) {
+                  if (selected)
+                    setState(() => sessionType = CircuitSessionType.hangboard);
+                },
+              ),
+            ],
+          ),
+
+          SizedBox(height: 16),
+
           // Compact configuration grid
           _buildCompactConfigInput(
-            'Pull Duration',
+            sessionType == CircuitSessionType.pull
+                ? 'Pull Duration'
+                : 'Hold Duration',
             '$pullDuration s',
             pullDuration,
             (value) => setState(() => pullDuration = value),
@@ -734,6 +835,19 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
             Icons.repeat,
             Colors.green,
           ),
+
+          if (sessionType == CircuitSessionType.hangboard) ...[
+            SizedBox(height: 12),
+            _buildCompactConfigInput(
+              'Edge Size',
+              '$pullEdge mm',
+              pullEdge,
+              (value) => setState(() => pullEdge = value),
+              isDarkMode,
+              Icons.crop_square,
+              Colors.purple,
+            ),
+          ],
         ],
       ),
     );
@@ -1181,20 +1295,23 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
           ),
           padding: EdgeInsets.symmetric(vertical: 8),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18),
-            SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18),
+              SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1207,6 +1324,17 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
 
   double convertLbsToKg(double lbs) {
     return lbs / 2.20462;
+  }
+
+  Widget _buildHangboardPlaceholder(bool isDarkMode) {
+    return Center(
+      child: Text(
+        'Hangboard mode not supported in this view',
+        style: TextStyle(
+          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+        ),
+      ),
+    );
   }
 }
 

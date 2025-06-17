@@ -28,6 +28,7 @@ class DynoDataProvider with ChangeNotifier {
   Stopwatch stopwatch = Stopwatch();
   Timer? timer;
   late final SessionDatabase _database;
+  bool _isScanning = false;
 
   // Callback for session auto-save notifications
   Function(String sessionName)? onSessionAutoSaved;
@@ -44,6 +45,9 @@ class DynoDataProvider with ChangeNotifier {
   }
 
   void scanForDevices() {
+    if (_isScanning) return; // Prevent duplicate scans
+    _isScanning = true;
+
     startScan((res) {
       if (res.code == 1) {
         updateGraphData(res.data);
@@ -166,6 +170,14 @@ class DynoDataProvider with ChangeNotifier {
       } catch (e) {
         print('Error auto-saving session: $e');
       }
+    }
+  }
+
+  // Call this to stop scanning safely
+  void stopScanning() async {
+    if (_isScanning) {
+      stopScan();
+      _isScanning = false;
     }
   }
 }
