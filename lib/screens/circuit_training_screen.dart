@@ -27,6 +27,7 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
   int restDuration = 5; // seconds
   int numCircuits = 5;
   bool isRunning = false;
+  bool isPaused = false;
   Timer? timer;
   int currentTime = 0;
   bool isPullPhase = true;
@@ -66,6 +67,7 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
 
     setState(() {
       isRunning = true;
+      isPaused = false;
       currentCircuit = 0;
       maxWeights = [];
       circuitSessions = [];
@@ -89,6 +91,7 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
     timer?.cancel();
     setState(() {
       isRunning = false;
+      isPaused = false;
     });
     final dynoProvider = Provider.of<DynoDataProvider>(context, listen: false);
     if (sessionType == CircuitSessionType.pull) {
@@ -104,6 +107,7 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
     timer?.cancel();
     setState(() {
       isRunning = false;
+      isPaused = false;
       currentCircuit = 0;
       maxWeights = [];
       circuitSessions = [];
@@ -123,6 +127,10 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
 
     timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
+        if (isPaused) {
+          return; // Skip updates while paused
+        }
+
         // Handle pre-phase countdown
         if (isCountdown) {
           if (countdownTime > 0) {
@@ -168,6 +176,12 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
           ));
 
           isPullPhase = false;
+          // Prepare rest phase timer directly (no extra countdown)
+          currentTime = restDuration;
+          // Stop recording for pull mode
+          if (sessionType == CircuitSessionType.pull) {
+            dynoProvider.stopData();
+          }
         } else {
           // End of rest phase – advance circuit counter
           currentCircuit++;
@@ -176,16 +190,10 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
             return;
           }
           isPullPhase = true;
+          currentTime = pullDuration;
         }
 
-        // Prepare for next phase with a countdown
-        isCountdown = true;
-        countdownTime = _preCountdownSeconds;
-
-        // Stop recording during rest for pull mode
-        if (sessionType == CircuitSessionType.pull && !isPullPhase) {
-          dynoProvider.stopData();
-        }
+        // No extra countdown between phases
       });
     });
   }
@@ -315,6 +323,23 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
     );
   }
 
+  void _togglePause() {
+    setState(() {
+      isPaused = !isPaused;
+      // For pull mode, stop or start data accordingly
+      final dynoProvider =
+          Provider.of<DynoDataProvider>(context, listen: false);
+      if (sessionType == CircuitSessionType.pull) {
+        if (isPaused) {
+          dynoProvider.pauseData();
+        } else {
+          // resume recording only during pull phase
+          if (isPullPhase) dynoProvider.resumeData();
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -421,7 +446,7 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
                               );
                             },
                           )
-                        : _buildHangboardPlaceholder(isDarkMode))
+                        : _buildHangboardView(isDarkMode))
                     : _buildConfigurationSection(isDarkMode),
               ),
             ),
@@ -1132,24 +1157,51 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
                   ],
                 ),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: color.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  value.toString(),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      if (value > min) {
+                        onChanged((value - 1).toDouble());
+                      }
+                    },
+                    icon: Icon(Icons.remove_circle_outline, size: 20),
                     color: color,
                   ),
-                ),
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: color.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      value.toString(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      if (value < max) {
+                        onChanged((value + 1).toDouble());
+                      }
+                    },
+                    icon: Icon(Icons.add_circle_outline, size: 20),
+                    color: color,
+                  ),
+                ],
               ),
             ],
           ),
@@ -1259,6 +1311,16 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
       children: [
         Expanded(
           child: _buildActionButton(
+            isPaused ? 'Resume' : 'Pause',
+            isPaused ? Icons.play_arrow : Icons.pause,
+            Colors.blue,
+            _togglePause,
+            isDarkMode,
+          ),
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: _buildActionButton(
             'Stop',
             Icons.stop,
             Colors.red,
@@ -1326,13 +1388,119 @@ class _CircuitTrainingScreenState extends State<CircuitTrainingScreen> {
     return lbs / 2.20462;
   }
 
-  Widget _buildHangboardPlaceholder(bool isDarkMode) {
-    return Center(
-      child: Text(
-        'Hangboard mode not supported in this view',
-        style: TextStyle(
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-        ),
+  Widget _buildHangboardView(bool isDarkMode) {
+    final textColor = isDarkMode ? Colors.white : Colors.grey[800];
+    final subTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
+
+    String phaseLabel;
+    Color phaseColor;
+    if (isCountdown) {
+      phaseLabel = 'Starting In';
+      phaseColor = Colors.blue;
+    } else if (isPullPhase) {
+      phaseLabel = 'HOLD';
+      phaseColor = Colors.blue;
+    } else {
+      phaseLabel = 'REST';
+      phaseColor = Colors.orange;
+    }
+
+    int displayedTime = isCountdown ? countdownTime : currentTime;
+
+    double circuitProgress =
+        numCircuits > 0 ? (currentCircuit / numCircuits).clamp(0.0, 1.0) : 0.0;
+
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Phase label
+          Text(
+            phaseLabel,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: phaseColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Circular timer (Pomodoro style)
+          SizedBox(
+            width: 220,
+            height: 220,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 180,
+                  height: 180,
+                  child: CircularProgressIndicator(
+                    value: isCountdown
+                        ? displayedTime / _preCountdownSeconds
+                        : (isPullPhase
+                            ? displayedTime / pullDuration
+                            : displayedTime / restDuration),
+                    strokeWidth: 10,
+                    valueColor: AlwaysStoppedAnimation<Color>(phaseColor),
+                    backgroundColor:
+                        (subTextColor ?? Colors.grey).withOpacity(0.2),
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      displayedTime.toString(),
+                      style: TextStyle(
+                        fontSize: 56,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      's',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: subTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Edge info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.crop_square, color: Colors.purple, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                '${pullEdge} mm Edge',
+                style: TextStyle(fontSize: 14, color: subTextColor),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Circuit progress bar
+          Text(
+            'Circuit ${currentCircuit + 1} of $numCircuits',
+            style: TextStyle(fontSize: 14, color: subTextColor),
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(
+            value: circuitProgress,
+            backgroundColor: (subTextColor ?? Colors.grey).withOpacity(0.2),
+            valueColor: AlwaysStoppedAnimation<Color>(phaseColor),
+            minHeight: 6,
+          ),
+        ],
       ),
     );
   }

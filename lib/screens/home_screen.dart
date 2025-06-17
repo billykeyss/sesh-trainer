@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   BluetoothDevice? connectedDevice;
   String elapsedTime = '0:00';
   bool showTestButton = true;
+  bool isPaused = false;
 
   @override
   Size get preferredSize => Size.fromHeight(kToolbarHeight);
@@ -93,11 +94,23 @@ class _HomeScreenState extends State<HomeScreen> {
   void stopData() {
     print("Stopping data");
     Provider.of<DynoDataProvider>(context, listen: false).stopData();
+    setState(() => isPaused = false);
   }
 
   void startData() {
     print("Starting data");
     Provider.of<DynoDataProvider>(context, listen: false).startData();
+    setState(() => isPaused = false);
+  }
+
+  void togglePause() {
+    final provider = Provider.of<DynoDataProvider>(context, listen: false);
+    if (isPaused) {
+      provider.resumeData();
+    } else {
+      provider.pauseData();
+    }
+    setState(() => isPaused = !isPaused);
   }
 
   void _runTestSession() {
@@ -883,10 +896,20 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Expanded(
               child: _buildActionButton(
-                'Start',
-                Icons.play_arrow,
+                isPaused ? 'Resume' : 'Start',
+                isPaused ? Icons.play_arrow : Icons.play_arrow,
                 Colors.green,
-                startData,
+                isPaused ? togglePause : startData,
+                isDarkMode,
+              ),
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: _buildActionButton(
+                isPaused ? 'Pause' : 'Pause',
+                isPaused ? Icons.pause : Icons.pause,
+                Colors.blue,
+                togglePause,
                 isDarkMode,
               ),
             ),
@@ -897,16 +920,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icons.stop,
                 Colors.red,
                 stopData,
-                isDarkMode,
-              ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: _buildActionButton(
-                'Reset',
-                Icons.refresh,
-                Colors.orange,
-                resetData,
                 isDarkMode,
               ),
             ),

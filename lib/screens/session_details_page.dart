@@ -58,12 +58,15 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
   final TextEditingController _nameController = TextEditingController();
   late final SessionDatabase _database;
   bool _isEditingName = false;
+  String _sessionType = 'pull';
+  Map<String, dynamic>? _sessionData;
 
   @override
   void initState() {
     super.initState();
     _database = SessionDatabase();
     _nameController.text = widget.sessionName;
+    _loadSessionMeta();
     _checkAndSaveSession();
   }
 
@@ -506,21 +509,25 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Hero metrics cards
-                      _buildHeroMetricsGrid(
-                        maxWeight: maxWeight,
-                        averageWeight: averageWeight,
-                        totalLoad: totalLoad,
-                        selectedUnit: selectedUnit,
-                        surfaceColor: surfaceColor,
-                        borderColor: borderColor,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        accentColor: accentColor,
-                        isTablet: isTablet,
-                      ),
-
-                      const SizedBox(height: 32),
+                      if (_sessionType != 'hangboard') ...[
+                        _buildHeroMetricsGrid(
+                          maxWeight: maxWeight,
+                          averageWeight: averageWeight,
+                          totalLoad: totalLoad,
+                          selectedUnit: selectedUnit,
+                          surfaceColor: surfaceColor,
+                          borderColor: borderColor,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          accentColor: accentColor,
+                          isTablet: isTablet,
+                        ),
+                        const SizedBox(height: 32),
+                      ] else ...[
+                        _buildHangboardSummary(surfaceColor, borderColor,
+                            textPrimary, textSecondary, accentColor),
+                        const SizedBox(height: 32),
+                      ],
 
                       // Graph section with modern styling
                       _buildModernGraphSection(
@@ -530,6 +537,8 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                         borderColor: borderColor,
                         textPrimary: textPrimary,
                         textSecondary: textSecondary,
+                        showGraph: _sessionType != 'hangboard' &&
+                            convertedGraphData.isNotEmpty,
                       ),
 
                       const SizedBox(height: 32),
@@ -570,130 +579,142 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
 
                       const SizedBox(height: 32),
 
-                      // Performance metrics in responsive grid
-                      _buildModernSection(
-                        title: 'Performance Analysis',
-                        icon: Icons.trending_up_outlined,
-                        children: [
-                          _buildMetricsGrid([
-                            _MetricData(
-                              title: 'Peak Force Rate',
-                              value:
-                                  '${peakForceRate.toStringAsFixed(1)} $selectedUnit/s',
-                              subtitle: 'Rate of force development',
-                              icon: Icons.speed_outlined,
-                              trend: peakForceRate > 50
-                                  ? TrendType.positive
-                                  : TrendType.neutral,
-                            ),
-                            _MetricData(
-                              title: 'Force Consistency',
-                              value:
-                                  '${calculateForceVariability(convertedGraphData).toStringAsFixed(2)}',
-                              subtitle: 'Standard deviation',
-                              icon: Icons.show_chart_outlined,
-                              trend: calculateForceVariability(
-                                          convertedGraphData) <
-                                      10
-                                  ? TrendType.positive
-                                  : TrendType.neutral,
-                            ),
-                            _MetricData(
-                              title: 'Fatigue Index',
-                              value: '${fatigueIndex.toStringAsFixed(1)}%',
-                              subtitle: _getFatigueDescription(fatigueIndex),
-                              icon: Icons.battery_charging_full_outlined,
-                              trend: fatigueIndex < 5
-                                  ? TrendType.positive
-                                  : fatigueIndex > 15
-                                      ? TrendType.negative
-                                      : TrendType.neutral,
-                            ),
-                          ], surfaceColor, borderColor, textPrimary,
-                              textSecondary, accentColor, isTablet),
-                        ],
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        accentColor: accentColor,
-                      ),
+                      if (_sessionType == 'hangboard') ...[
+                        _buildHangboardAnalyticsSection(
+                            surfaceColor,
+                            borderColor,
+                            textPrimary,
+                            textSecondary,
+                            accentColor,
+                            isTablet),
+                        const SizedBox(height: 32),
+                      ] else ...[
+                        // Performance metrics in responsive grid
+                        _buildModernSection(
+                          title: 'Performance Analysis',
+                          icon: Icons.trending_up_outlined,
+                          children: [
+                            _buildMetricsGrid([
+                              _MetricData(
+                                title: 'Peak Force Rate',
+                                value:
+                                    '${peakForceRate.toStringAsFixed(1)} $selectedUnit/s',
+                                subtitle: 'Rate of force development',
+                                icon: Icons.speed_outlined,
+                                trend: peakForceRate > 50
+                                    ? TrendType.positive
+                                    : TrendType.neutral,
+                              ),
+                              _MetricData(
+                                title: 'Force Consistency',
+                                value:
+                                    '${calculateForceVariability(convertedGraphData).toStringAsFixed(2)}',
+                                subtitle: 'Standard deviation',
+                                icon: Icons.show_chart_outlined,
+                                trend: calculateForceVariability(
+                                            convertedGraphData) <
+                                        10
+                                    ? TrendType.positive
+                                    : TrendType.neutral,
+                              ),
+                              _MetricData(
+                                title: 'Fatigue Index',
+                                value: '${fatigueIndex.toStringAsFixed(1)}%',
+                                subtitle: _getFatigueDescription(fatigueIndex),
+                                icon: Icons.battery_charging_full_outlined,
+                                trend: fatigueIndex < 5
+                                    ? TrendType.positive
+                                    : fatigueIndex > 15
+                                        ? TrendType.negative
+                                        : TrendType.neutral,
+                              ),
+                            ], surfaceColor, borderColor, textPrimary,
+                                textSecondary, accentColor, isTablet),
+                          ],
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          accentColor: accentColor,
+                        ),
 
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                      // Endurance analysis
-                      _buildModernSection(
-                        title: 'Endurance Breakdown',
-                        icon: Icons.fitness_center_outlined,
-                        children: [
-                          _buildEnduranceChart(
-                              holdDurations,
-                              surfaceColor,
-                              borderColor,
-                              textPrimary,
-                              textSecondary,
-                              accentColor),
-                        ],
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        accentColor: accentColor,
-                      ),
+                        // Endurance analysis
+                        _buildModernSection(
+                          title: 'Endurance Breakdown',
+                          icon: Icons.fitness_center_outlined,
+                          children: [
+                            _buildEnduranceChart(
+                                holdDurations,
+                                surfaceColor,
+                                borderColor,
+                                textPrimary,
+                                textSecondary,
+                                accentColor),
+                          ],
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          accentColor: accentColor,
+                        ),
 
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                      // Training zones
-                      _buildModernSection(
-                        title: 'Training Intensity Zones',
-                        icon: Icons.donut_small_outlined,
-                        children: [
-                          _buildIntensityZones(
-                              timeInZones,
-                              surfaceColor,
-                              borderColor,
-                              textPrimary,
-                              textSecondary,
-                              accentColor),
-                        ],
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        accentColor: accentColor,
-                      ),
+                        // Training zones
+                        _buildModernSection(
+                          title: 'Training Intensity Zones',
+                          icon: Icons.donut_small_outlined,
+                          children: [
+                            _buildIntensityZones(
+                                timeInZones,
+                                surfaceColor,
+                                borderColor,
+                                textPrimary,
+                                textSecondary,
+                                accentColor),
+                          ],
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          accentColor: accentColor,
+                        ),
 
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                      // Recovery analysis
-                      _buildModernSection(
-                        title: 'Recovery Analysis',
-                        icon: Icons.restore_outlined,
-                        children: [
-                          _buildMetricsGrid([
-                            _MetricData(
-                              title: 'Avg Recovery Time',
-                              value:
-                                  '${recoveryMetrics['avgRecoveryTime']!.toStringAsFixed(1)}s',
-                              subtitle: 'Time between efforts',
-                              icon: Icons.timer_outlined,
-                              trend: recoveryMetrics['avgRecoveryTime']! < 30
-                                  ? TrendType.positive
-                                  : TrendType.neutral,
-                            ),
-                            _MetricData(
-                              title: 'Recovery Efficiency',
-                              value:
-                                  '${recoveryMetrics['recoveryEfficiency']!.toStringAsFixed(0)}%',
-                              subtitle: 'Recovery quality score',
-                              icon: Icons.trending_up_outlined,
-                              trend: recoveryMetrics['recoveryEfficiency']! > 70
-                                  ? TrendType.positive
-                                  : TrendType.neutral,
-                            ),
-                          ], surfaceColor, borderColor, textPrimary,
-                              textSecondary, accentColor, isTablet),
-                        ],
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        accentColor: accentColor,
-                      ),
+                        // Recovery analysis
+                        _buildModernSection(
+                          title: 'Recovery Analysis',
+                          icon: Icons.restore_outlined,
+                          children: [
+                            _buildMetricsGrid([
+                              _MetricData(
+                                title: 'Avg Recovery Time',
+                                value:
+                                    '${recoveryMetrics['avgRecoveryTime']!.toStringAsFixed(1)}s',
+                                subtitle: 'Time between efforts',
+                                icon: Icons.timer_outlined,
+                                trend: recoveryMetrics['avgRecoveryTime']! < 30
+                                    ? TrendType.positive
+                                    : TrendType.neutral,
+                              ),
+                              _MetricData(
+                                title: 'Recovery Efficiency',
+                                value:
+                                    '${recoveryMetrics['recoveryEfficiency']!.toStringAsFixed(0)}%',
+                                subtitle: 'Recovery quality score',
+                                icon: Icons.trending_up_outlined,
+                                trend:
+                                    recoveryMetrics['recoveryEfficiency']! > 70
+                                        ? TrendType.positive
+                                        : TrendType.neutral,
+                              ),
+                            ], surfaceColor, borderColor, textPrimary,
+                                textSecondary, accentColor, isTablet),
+                          ],
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          accentColor: accentColor,
+                        ),
 
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
+                      ],
 
                       // Volume trends
                       FutureBuilder<Map<String, String>>(
@@ -996,6 +1017,67 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     );
   }
 
+  Widget _buildHangboardSummary(Color surfaceColor, Color borderColor,
+      Color textPrimary, Color textSecondary, Color accentColor) {
+    final edge = _sessionData?['edge'] ?? '—';
+    final circuits = _sessionData?['numCircuits'] ?? '—';
+    final holdDuration = _sessionData?['pullDuration'] ?? '—';
+    final restDuration = _sessionData?['restDuration'] ?? '—';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.crop_square, color: accentColor, size: 24),
+              const SizedBox(width: 8),
+              Text('Hangboard Summary',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: textPrimary,
+                  )),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildHangboardRow(
+              'Edge Size', '${edge} mm', textPrimary, textSecondary),
+          _buildHangboardRow(
+              'Circuits', '$circuits', textPrimary, textSecondary),
+          _buildHangboardRow(
+              'Hold', '${holdDuration}s', textPrimary, textSecondary),
+          _buildHangboardRow(
+              'Rest', '${restDuration}s', textPrimary, textSecondary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHangboardRow(
+      String label, String value, Color textPrimary, Color textSecondary) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: textSecondary, fontSize: 14)),
+          Text(value,
+              style: TextStyle(
+                  color: textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildModernGraphSection({
     required List<FlSpot> convertedGraphData,
     required String selectedUnit,
@@ -1003,7 +1085,12 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     required Color borderColor,
     required Color textPrimary,
     required Color textSecondary,
+    bool showGraph = true,
   }) {
+    if (!showGraph) {
+      return SizedBox.shrink();
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: surfaceColor,
@@ -1042,11 +1129,13 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
             ),
           ),
           Container(
-            height: 300,
+            height: 240,
             padding: const EdgeInsets.only(left: 8, right: 20, bottom: 20),
             child: WeightGraph(
               graphData: convertedGraphData,
               weightUnit: selectedUnit,
+              height: 240,
+              showHeader: false,
             ),
           ),
         ],
@@ -1639,5 +1728,101 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
         ),
       );
     }
+  }
+
+  void _loadSessionMeta() async {
+    try {
+      final sessions = await _database.getAllSessions();
+      final current = sessions.firstWhere((s) => s.name == widget.sessionName,
+          orElse: () => sessions.first);
+      if (current.data != null && current.data.isNotEmpty) {
+        final parsed = jsonDecode(current.data);
+        if (parsed is Map<String, dynamic>) {
+          _sessionData = parsed;
+          _sessionType = parsed['sessionType'] ?? parsed['type'] ?? 'pull';
+        }
+      }
+      setState(() {});
+    } catch (e) {
+      // ignore errors
+    }
+  }
+
+  Widget _buildHangboardAnalyticsSection(
+      Color surfaceColor,
+      Color borderColor,
+      Color textPrimary,
+      Color textSecondary,
+      Color accentColor,
+      bool isTablet) {
+    // Safely parse metadata values
+    final int circuits =
+        int.tryParse(_sessionData?['numCircuits']?.toString() ?? '0') ?? 0;
+    final double holdDuration =
+        double.tryParse(_sessionData?['pullDuration']?.toString() ?? '0') ??
+            0.0;
+    final double restDuration =
+        double.tryParse(_sessionData?['restDuration']?.toString() ?? '0') ??
+            0.0;
+    final double edgeSize =
+        double.tryParse(_sessionData?['edge']?.toString() ?? '0') ?? 0.0;
+
+    final double totalHangTime = holdDuration * circuits;
+    final double totalRestTime = restDuration * circuits;
+    final double totalSessionTime = (holdDuration + restDuration) * circuits;
+    final double workRestRatio =
+        restDuration > 0 ? holdDuration / restDuration : 0.0;
+
+    final metrics = <_MetricData>[
+      _MetricData(
+        title: 'Total Hang Time',
+        value: '${totalHangTime.toStringAsFixed(0)}s',
+        subtitle: 'Time under tension',
+        icon: Icons.timer_outlined,
+        trend: TrendType.neutral,
+      ),
+      _MetricData(
+        title: 'Total Rest Time',
+        value: '${totalRestTime.toStringAsFixed(0)}s',
+        subtitle: 'Recovery between hangs',
+        icon: Icons.hourglass_empty_outlined,
+        trend: TrendType.neutral,
+      ),
+      _MetricData(
+        title: 'Session Duration',
+        value: '${totalSessionTime.toStringAsFixed(0)}s',
+        subtitle: 'Hang + rest',
+        icon: Icons.access_time,
+        trend: TrendType.neutral,
+      ),
+      _MetricData(
+        title: 'Work:Rest Ratio',
+        value: restDuration > 0
+            ? '1:${(restDuration / holdDuration).toStringAsFixed(1)}'
+            : 'N/A',
+        subtitle: 'Efficiency of protocol',
+        icon: Icons.compare_arrows_outlined,
+        trend: TrendType.neutral,
+      ),
+      _MetricData(
+        title: 'Edge Size',
+        value: '${edgeSize.toStringAsFixed(0)} mm',
+        subtitle: 'Edge depth used',
+        icon: Icons.crop_square,
+        trend: TrendType.neutral,
+      ),
+    ];
+
+    return _buildModernSection(
+      title: 'Hangboard Analytics',
+      icon: Icons.assessment_outlined,
+      children: [
+        _buildMetricsGrid(metrics, surfaceColor, borderColor, textPrimary,
+            textSecondary, accentColor, isTablet),
+      ],
+      textPrimary: textPrimary,
+      textSecondary: textSecondary,
+      accentColor: accentColor,
+    );
   }
 }

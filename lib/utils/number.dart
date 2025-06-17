@@ -21,6 +21,7 @@ String formatElapsedTimeIntToString(int elapsedTimeMs) {
 }
 
 double calculateMaxWeight(List<FlSpot> graphData) {
+  if (graphData.isEmpty) return 0.0;
   return graphData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
 }
 

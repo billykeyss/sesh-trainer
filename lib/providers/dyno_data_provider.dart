@@ -29,6 +29,7 @@ class DynoDataProvider with ChangeNotifier {
   Timer? timer;
   late final SessionDatabase _database;
   bool _isScanning = false;
+  bool _paused = false;
 
   // Callback for session auto-save notifications
   Function(String sessionName)? onSessionAutoSaved;
@@ -38,6 +39,19 @@ class DynoDataProvider with ChangeNotifier {
   }
 
   double get totalLoad => _totalLoad;
+
+  bool get isPaused => _paused;
+
+  void _startNotifierTimer() {
+    timer?.cancel();
+    timer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
+      if (!recordData || _paused) {
+        t.cancel();
+      } else {
+        notifyListeners();
+      }
+    });
+  }
 
   Future<void> requestPermissions() async {
     await Permission.bluetooth.request();
@@ -112,17 +126,32 @@ class DynoDataProvider with ChangeNotifier {
     recordData = true;
     stopwatch.start();
     sessionStartTime = DateTime.now().millisecondsSinceEpoch;
-    timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
-      if (!recordData) {
-        timer.cancel();
-      }
-      notifyListeners();
-    });
+    _paused = false;
+    _startNotifierTimer();
+    notifyListeners();
+  }
+
+  void pauseData() {
+    if (!recordData) return;
+    _paused = true;
+    recordData = false;
+    stopwatch.stop();
+    timer?.cancel();
+    notifyListeners();
+  }
+
+  void resumeData() {
+    if (!_paused) return;
+    _paused = false;
+    recordData = true;
+    stopwatch.start();
+    _startNotifierTimer();
     notifyListeners();
   }
 
   void stopData() {
     recordData = false;
+    _paused = false;
     stopwatch.stop();
     timer?.cancel();
 
