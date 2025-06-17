@@ -8,10 +8,16 @@ import '../models/info.dart';
 class WeightGraph extends StatelessWidget {
   final List<FlSpot> graphData;
   final String weightUnit;
+  final double? height;
+  final bool showHeader;
+  final bool showLegend;
 
   WeightGraph({
     required this.graphData,
     required this.weightUnit,
+    this.height,
+    this.showHeader = true,
+    this.showLegend = true,
   });
 
   @override
@@ -63,75 +69,79 @@ class WeightGraph extends StatelessWidget {
         double zone3 = maxWeight * 0.8; // High effort
 
         return Container(
-          margin: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color:
-                    isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
+          margin: showHeader ? EdgeInsets.all(16) : EdgeInsets.zero,
+          decoration: showHeader
+              ? BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDarkMode
+                          ? Colors.black26
+                          : Colors.grey.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                )
+              : null,
           child: Column(
             children: [
               // Header
-              Container(
-                padding: EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            primaryColor.withOpacity(0.2),
-                            accentColor.withOpacity(0.1)
+              if (showHeader)
+                Container(
+                  padding: EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              primaryColor.withOpacity(0.2),
+                              accentColor.withOpacity(0.1)
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.show_chart,
+                          color: primaryColor,
+                          size: 24,
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Force Over Time',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                            Text(
+                              convertedGraphData.isNotEmpty
+                                  ? 'Peak: ${maxWeight.toStringAsFixed(1)} $selectedUnit'
+                                  : 'No data recorded',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: subtitleColor,
+                              ),
+                            ),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(
-                        Icons.show_chart,
-                        color: primaryColor,
-                        size: 24,
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Force Over Time',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
-                            ),
-                          ),
-                          Text(
-                            convertedGraphData.isNotEmpty
-                                ? 'Peak: ${maxWeight.toStringAsFixed(1)} $selectedUnit'
-                                : 'No data recorded',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: subtitleColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
               // Chart
               Container(
-                height: 280,
+                height: height ?? 280,
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
                 child: convertedGraphData.isEmpty
                     ? _buildEmptyState(context, isDarkMode)
@@ -254,7 +264,7 @@ class WeightGraph extends StatelessWidget {
               ),
 
               // Legend/Info bar
-              if (convertedGraphData.isNotEmpty)
+              if (showLegend && convertedGraphData.isNotEmpty)
                 Container(
                   padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
                   child: Row(

@@ -4,7 +4,7 @@ import 'package:sesh_trainer/screens/home_screen.dart';
 void main() {
   group('ScaleHomePage Tests', () {
     testWidgets('Widget Initialization Test', (WidgetTester tester) async {
-      await tester.pumpWidget(ScaleHomePage());
+      await tester.pumpWidget(HomeScreen());
 
       // Verify that the weight card is displayed
       expect(find.text('Weight'), findsOneWidget);
@@ -17,7 +17,7 @@ void main() {
     });
 
     testWidgets('Start Data Test', (WidgetTester tester) async {
-      await tester.pumpWidget(ScaleHomePage());
+      await tester.pumpWidget(HomeScreen());
 
       // Tap the start button
       await tester.tap(find.text('Start'));
@@ -28,7 +28,7 @@ void main() {
     });
 
     testWidgets('Stop Data Test', (WidgetTester tester) async {
-      await tester.pumpWidget(ScaleHomePage());
+      await tester.pumpWidget(HomeScreen());
 
       // Tap the stop button
       await tester.tap(find.text('Stop'));
@@ -39,7 +39,7 @@ void main() {
     });
 
     testWidgets('Reset Data Test', (WidgetTester tester) async {
-      await tester.pumpWidget(ScaleHomePage());
+      await tester.pumpWidget(HomeScreen());
 
       // Tap the reset button
       await tester.tap(find.text('Reset'));

@@ -1,27 +1,29 @@
-import 'package:sesh_trainer/providers/dyno_data_provider.dart';
-import 'package:sesh_trainer/widgets/dyno_data_display.dart';
-import 'package:sesh_trainer/widgets/status_icon_bar.dart';
+import 'dart:async';
+import 'dart:math';
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:async';
-import 'package:sesh_trainer/models/info.dart';
-import 'package:sesh_trainer/providers/theme_provider.dart';
-import 'package:sesh_trainer/widgets/weight_graph.dart';
-import 'package:sesh_trainer/screens/insights_page.dart';
-import 'package:sesh_trainer/screens/calendar_view.dart';
-import 'package:sesh_trainer/utils/number.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import 'dart:math';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:sesh_trainer/models/info.dart';
+import 'package:sesh_trainer/providers/dyno_data_provider.dart';
+import 'package:sesh_trainer/providers/theme_provider.dart';
+import 'package:sesh_trainer/screens/calendar_view.dart';
+import 'package:sesh_trainer/screens/insights_page.dart';
+import 'package:sesh_trainer/screens/circuit_training_screen.dart';
+import 'package:sesh_trainer/screens/insights_page_with_ai.dart';
+import 'package:sesh_trainer/utils/number.dart';
+import 'package:sesh_trainer/widgets/weight_graph.dart';
 
-class ScaleHomePage extends StatefulWidget {
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
   @override
-  _ScaleHomePageState createState() => _ScaleHomePageState();
+  _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _ScaleHomePageState extends State<ScaleHomePage> {
+class _HomeScreenState extends State<HomeScreen> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   BluetoothDevice? connectedDevice;
   String elapsedTime = '0:00';
@@ -200,7 +202,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
             ),
             SizedBox(width: 12),
             Text(
-              'Training SESH',
+              'Sesh Training',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
@@ -357,7 +359,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
 
                     // App title with enhanced styling
                     Text(
-                      'Training SESH',
+                      'Sesh Training',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -406,11 +408,33 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                 ),
                 _buildDrawerItem(
                   context,
+                  Icons.timer,
+                  'Circuit Training',
+                  'Interval training mode',
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => CircuitTrainingScreen())),
+                  isDarkMode,
+                ),
+                _buildDrawerItem(
+                  context,
                   Icons.insights,
-                  'Progress & Insights',
+                  'Progress & Analytics',
                   'Track your improvement',
                   () => Navigator.push(context,
                       MaterialPageRoute(builder: (context) => InsightsPage())),
+                  isDarkMode,
+                ),
+                _buildDrawerItem(
+                  context,
+                  Icons.insights,
+                  'AI Insights',
+                  'AI-powered insights',
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => InsightsPageWithAI())),
                   isDarkMode,
                 ),
                 Divider(
@@ -455,6 +479,15 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                             child: Container(
                               width: 40,
                               height: 36,
+                              child: Center(
+                                child: Icon(
+                                  themeProvider.isDarkMode
+                                      ? Icons.dark_mode
+                                      : Icons.light_mode,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(20),
                                 color: themeProvider.isDarkMode
@@ -469,25 +502,6 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                                 ],
                               ),
                             ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              Icon(
-                                Icons.light_mode,
-                                size: 18,
-                                color: themeProvider.isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.orange,
-                              ),
-                              Icon(
-                                Icons.dark_mode,
-                                size: 18,
-                                color: themeProvider.isDarkMode
-                                    ? Colors.white
-                                    : Colors.grey[400],
-                              ),
-                            ],
                           ),
                         ],
                       ),
@@ -521,6 +535,16 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                             child: Container(
                               width: 40,
                               height: 36,
+                              child: Center(
+                                child: Text(
+                                  selectedUnit == Info.Pounds ? 'lbs' : 'kg',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(20),
                                 color: (selectedUnit == Info.Pounds)
@@ -535,31 +559,6 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                                 ],
                               ),
                             ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              Text(
-                                'kg',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: (selectedUnit == Info.Pounds)
-                                      ? Colors.grey[400]
-                                      : Colors.white,
-                                ),
-                              ),
-                              Text(
-                                'lbs',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: (selectedUnit == Info.Pounds)
-                                      ? Colors.white
-                                      : Colors.grey[400],
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),

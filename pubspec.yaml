@@ -30,21 +30,23 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_blue: 0.8.0
-  fl_chart: 0.68.0
+  flutter_blue: ^0.8.0
+  fl_chart: ^0.68.0
   permission_handler: 11.3.1
-  intl: 0.19.0
+  intl: ^0.19.0
   share_plus: 10.0.2
   screenshot: 3.0.0
-  path_provider: 2.1.4
-  path: 1.9.0
-  sqflite: 2.3.3+1
+  path_provider: ^2.1.3
+  path: ^1.9.0
+  sqflite: ^2.3.3+1
   flutter_email_sender: 6.0.3
-  drift: 2.20.0
-  drift_sqflite: 2.0.0
+  drift: ^2.16.0
+  drift_sqflite: ^2.0.0
   collection: 1.18.0
-  provider: 6.1.2
+  provider: ^6.1.2
   table_calendar: ^3.0.9
+  google_generative_ai: ^0.2.2
+  flutter_dotenv: ^5.1.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -79,6 +81,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/sesh_logo_black_square.png
+    - .env
 
   # To add assets to your application, add an assets section, like this:
   # assets:

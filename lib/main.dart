@@ -6,10 +6,19 @@ import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print('Warning: Could not load .env file: $e');
+    print('Please copy .env.template to .env and add your API keys');
+  }
 
   // Force portrait orientation for all devices
   SystemChrome.setPreferredOrientations([
@@ -47,11 +56,11 @@ class MyApp extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
-          title: 'Training SESH',
+          title: 'TrainingSesh',
           theme: ThemeData.light(),
           darkTheme: ThemeData.dark(),
           themeMode: themeProvider.themeMode,
-          home: ScaleHomePage(),
+          home: HomeScreen(),
         );
       },
     );
