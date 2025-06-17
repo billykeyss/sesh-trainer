@@ -6,6 +6,10 @@ import 'package:flutter_blue/flutter_blue.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/info.dart';
 import '../services/ble_service.dart';
+import '../database/session_database.dart';
+import 'package:drift/drift.dart' as drift;
+import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class DynoDataProvider with ChangeNotifier {
   FlutterBlue flutterBlue = FlutterBlue.instance;
@@ -23,6 +27,14 @@ class DynoDataProvider with ChangeNotifier {
   String weightUnit = Info.Kilogram;
   Stopwatch stopwatch = Stopwatch();
   Timer? timer;
+  late final SessionDatabase _database;
+
+  // Callback for session auto-save notifications
+  Function(String sessionName)? onSessionAutoSaved;
+
+  DynoDataProvider() {
+    _database = SessionDatabase();
+  }
 
   double get totalLoad => _totalLoad;
 
@@ -109,6 +121,51 @@ class DynoDataProvider with ChangeNotifier {
     recordData = false;
     stopwatch.stop();
     timer?.cancel();
+
+    // Auto-save session if there's meaningful data
+    _autoSaveSession();
+
     notifyListeners();
+  }
+
+  Future<void> _autoSaveSession() async {
+    // Only save if session has meaningful data (at least 5 seconds and some weight data)
+    if (graphData.isNotEmpty &&
+        stopwatch.elapsedMilliseconds >= 5000 &&
+        maxWeights.values.any((weight) => weight > 0)) {
+      try {
+        // Generate session name with timestamp
+        final sessionTime =
+            DateTime.fromMillisecondsSinceEpoch(sessionStartTime);
+        final sessionName =
+            'Session ${DateFormat('MMM dd, yyyy HH:mm').format(sessionTime)}';
+
+        // Check if session with this name already exists
+        final existingSessions = await _database.getAllSessions();
+        final sessionExists =
+            existingSessions.any((session) => session.name == sessionName);
+
+        if (!sessionExists) {
+          final newSession = SessionsCompanion(
+            name: drift.Value(sessionName),
+            email: drift.Value(''), // Keep empty for personal training
+            elapsedTimeMs: drift.Value(stopwatch.elapsedMilliseconds),
+            weightUnit: drift.Value(weightUnit),
+            sessionTime: drift.Value(sessionTime),
+            graphData: drift.Value(jsonEncode(
+                graphData.map((spot) => {'x': spot.x, 'y': spot.y}).toList())),
+            data: drift.Value(''),
+          );
+
+          await _database.insertSession(newSession);
+          print('Session auto-saved: $sessionName');
+
+          // Notify UI about successful auto-save
+          onSessionAutoSaved?.call(sessionName);
+        }
+      } catch (e) {
+        print('Error auto-saving session: $e');
+      }
+    }
   }
 }

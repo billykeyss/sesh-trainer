@@ -8,9 +8,8 @@ import 'dart:async';
 import 'package:sesh_trainer/models/info.dart';
 import 'package:sesh_trainer/providers/theme_provider.dart';
 import 'package:sesh_trainer/widgets/weight_graph.dart';
-import 'package:sesh_trainer/screens/session_details_page.dart';
-import 'package:sesh_trainer/screens/saved_sessions_page.dart';
 import 'package:sesh_trainer/screens/insights_page.dart';
+import 'package:sesh_trainer/screens/calendar_view.dart';
 import 'package:sesh_trainer/utils/number.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -36,6 +35,44 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
     super.initState();
     requestPermissions();
     Future.delayed(const Duration(seconds: 2), scanForDevices);
+
+    // Set up auto-save notification callback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final dynoDataProvider =
+          Provider.of<DynoDataProvider>(context, listen: false);
+      dynoDataProvider.onSessionAutoSaved = (String sessionName) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Session auto-saved: $sessionName'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'View',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CalendarView(),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        }
+      };
+    });
   }
 
   Future<void> requestPermissions() async {
@@ -59,29 +96,6 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
   void startData() {
     print("Starting data");
     Provider.of<DynoDataProvider>(context, listen: false).startData();
-  }
-
-  void viewDetails() {
-    final dynoDataProvider =
-        Provider.of<DynoDataProvider>(context, listen: false);
-    final unit = Provider.of<ThemeProvider>(context, listen: false).unit;
-
-    if (dynoDataProvider.graphData.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SessionDetailsPage(
-            graphData: dynoDataProvider.graphData,
-            sessionStartTime: DateTime.fromMillisecondsSinceEpoch(
-                dynoDataProvider.sessionStartTime),
-            elapsedTimeMs: dynoDataProvider.stopwatch.elapsedMilliseconds,
-            weightUnit: unit,
-            sessionName:
-                'Session ${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}',
-          ),
-        ),
-      );
-    }
   }
 
   void _runTestSession() {
@@ -143,7 +157,7 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
         // Show completion message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Test session completed! Check your results.'),
+            content: Text('Test session completed and auto-saved!'),
             duration: Duration(seconds: 2),
             backgroundColor: Colors.green,
           ),
@@ -383,13 +397,11 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
               children: [
                 _buildDrawerItem(
                   context,
-                  Icons.history,
-                  'Training History',
-                  'View past sessions',
-                  () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => SavedSessionsPage())),
+                  Icons.calendar_today,
+                  'Training Calendar',
+                  'View sessions by date',
+                  () => Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => CalendarView())),
                   isDarkMode,
                 ),
                 _buildDrawerItem(
@@ -422,22 +434,136 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                   Icons.brightness_6,
                   'Dark Mode',
                   'Toggle theme',
-                  Switch(
-                    value: themeProvider.isDarkMode,
-                    onChanged: (value) => themeProvider.toggleTheme(value),
-                    activeColor: Colors.blue,
+                  GestureDetector(
+                    onTap: () =>
+                        themeProvider.toggleTheme(!themeProvider.isDarkMode),
+                    child: Container(
+                      width: 80,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: isDarkMode
+                            ? Colors.blue.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.2),
+                      ),
+                      child: Stack(
+                        children: [
+                          AnimatedPositioned(
+                            duration: Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            left: themeProvider.isDarkMode ? 40 : 0,
+                            child: Container(
+                              width: 40,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: themeProvider.isDarkMode
+                                    ? Colors.blue
+                                    : Colors.grey[400],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Icon(
+                                Icons.light_mode,
+                                size: 18,
+                                color: themeProvider.isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.orange,
+                              ),
+                              Icon(
+                                Icons.dark_mode,
+                                size: 18,
+                                color: themeProvider.isDarkMode
+                                    ? Colors.white
+                                    : Colors.grey[400],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   isDarkMode,
                 ),
                 _buildSettingItem(
                   context,
                   Icons.swap_horiz,
-                  'Unit: $selectedUnit',
-                  'Weight measurement',
-                  Switch(
-                    value: selectedUnit == Info.Pounds,
-                    onChanged: (bool value) => themeProvider.toggleUnit(value),
-                    activeColor: Colors.blue,
+                  'Weight Unit',
+                  'Toggle between kg and lbs',
+                  GestureDetector(
+                    onTap: () => themeProvider
+                        .toggleUnit(!(selectedUnit == Info.Pounds)),
+                    child: Container(
+                      width: 80,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: (selectedUnit == Info.Pounds)
+                            ? Colors.blue.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.2),
+                      ),
+                      child: Stack(
+                        children: [
+                          AnimatedPositioned(
+                            duration: Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            left: (selectedUnit == Info.Pounds) ? 40 : 0,
+                            child: Container(
+                              width: 40,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: (selectedUnit == Info.Pounds)
+                                    ? Colors.blue
+                                    : Colors.grey[400],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Text(
+                                'kg',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: (selectedUnit == Info.Pounds)
+                                      ? Colors.grey[400]
+                                      : Colors.white,
+                                ),
+                              ),
+                              Text(
+                                'lbs',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: (selectedUnit == Info.Pounds)
+                                      ? Colors.white
+                                      : Colors.grey[400],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   isDarkMode,
                 ),
@@ -787,22 +913,11 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
             ),
           ],
         ),
-        SizedBox(height: 8),
-
-        // Secondary actions row
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                'Save Session',
-                Icons.save,
-                Colors.blue,
-                viewDetails,
-                isDarkMode,
-              ),
-            ),
-            if (showTestButton) ...[
-              SizedBox(width: 8),
+        if (showTestButton) ...[
+          SizedBox(height: 8),
+          // Test mode button - full width
+          Row(
+            children: [
               Expanded(
                 child: _buildActionButton(
                   'Test Mode',
@@ -813,8 +928,8 @@ class _ScaleHomePageState extends State<ScaleHomePage> {
                 ),
               ),
             ],
-          ],
-        ),
+          ),
+        ],
       ],
     );
   }
