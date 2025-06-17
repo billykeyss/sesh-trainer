@@ -64,5 +64,5 @@ double convertWeight(double weight, String fromUnit, String toUnit) {
   } else if (fromUnit == Info.Pounds && toUnit == Info.Kilogram) {
     return convertLbsToKg(weight);
   }
-  return weight; // Fallback, should never hit this if units are correct
+  return weight;
 }

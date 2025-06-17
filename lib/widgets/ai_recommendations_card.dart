@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/llm_insights_service.dart';
+import '../services/llm_insight_prompts.dart';
 import '../database/session_database.dart';
+import 'dart:convert';
 
 class AIRecommendationsCard extends StatefulWidget {
   final List<Session> sessions;
@@ -26,8 +28,25 @@ class _AIRecommendationsCardState extends State<AIRecommendationsCard> {
   @override
   void initState() {
     super.initState();
-    if (widget.sessions.isNotEmpty) {
-      _generateInsights();
+    _loadCachedInsights();
+  }
+
+  Future<void> _loadCachedInsights() async {
+    final db = SessionDatabase();
+    final cached = await db.getLatestInsight();
+    if (cached != null) {
+      setState(() {
+        insights = TrainingInsights(
+          recommendations: (jsonDecode(cached.recommendationsJson)
+                  as List<dynamic>)
+              .map((e) =>
+                  TrainingRecommendation.fromJson(Map<String, dynamic>.from(e)))
+              .toList(),
+          analysisData:
+              jsonDecode(cached.analysisDataJson) as Map<String, dynamic>,
+          generatedAt: cached.generatedAt,
+        );
+      });
     }
   }
 
@@ -105,7 +124,8 @@ class _AIRecommendationsCardState extends State<AIRecommendationsCard> {
                         'Personalized recommendations based on your training data',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
                     ],
@@ -268,14 +288,15 @@ class _AIRecommendationsCardState extends State<AIRecommendationsCard> {
   }
 
   Widget _buildRecommendationItem(TrainingRecommendation recommendation) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: recommendation.categoryColor.withOpacity(0.05),
+        color: recommendation.categoryColor.withOpacity(isDark ? 0.15 : 0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: recommendation.categoryColor.withOpacity(0.2),
+          color: recommendation.categoryColor.withOpacity(isDark ? 0.3 : 0.2),
           width: 1,
         ),
       ),
@@ -337,7 +358,7 @@ class _AIRecommendationsCardState extends State<AIRecommendationsCard> {
             recommendation.description,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[700],
+              color: isDark ? Colors.grey[300] : Colors.grey[700],
               height: 1.4,
             ),
           ),
@@ -350,7 +371,7 @@ class _AIRecommendationsCardState extends State<AIRecommendationsCard> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+                color: isDark ? Colors.grey[300] : Colors.grey[800],
               ),
             ),
             SizedBox(height: 6),
@@ -372,7 +393,9 @@ class _AIRecommendationsCardState extends State<AIRecommendationsCard> {
                               action,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey[700],
+                                color: isDark
+                                    ? Colors.grey[300]
+                                    : Colors.grey[700],
                               ),
                             ),
                           ),

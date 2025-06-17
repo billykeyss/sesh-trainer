@@ -434,15 +434,514 @@ class SessionsCompanion extends UpdateCompanion<Session> {
   }
 }
 
+class $AiInsightsTable extends AiInsights
+    with TableInfo<$AiInsightsTable, AiInsight> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AiInsightsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _recommendationsJsonMeta =
+      const VerificationMeta('recommendationsJson');
+  @override
+  late final GeneratedColumn<String> recommendationsJson =
+      GeneratedColumn<String>('recommendations_json', aliasedName, false,
+          type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _analysisDataJsonMeta =
+      const VerificationMeta('analysisDataJson');
+  @override
+  late final GeneratedColumn<String> analysisDataJson = GeneratedColumn<String>(
+      'analysis_data_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _generatedAtMeta =
+      const VerificationMeta('generatedAt');
+  @override
+  late final GeneratedColumn<DateTime> generatedAt = GeneratedColumn<DateTime>(
+      'generated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, recommendationsJson, analysisDataJson, generatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ai_insights';
+  @override
+  VerificationContext validateIntegrity(Insertable<AiInsight> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('recommendations_json')) {
+      context.handle(
+          _recommendationsJsonMeta,
+          recommendationsJson.isAcceptableOrUnknown(
+              data['recommendations_json']!, _recommendationsJsonMeta));
+    } else if (isInserting) {
+      context.missing(_recommendationsJsonMeta);
+    }
+    if (data.containsKey('analysis_data_json')) {
+      context.handle(
+          _analysisDataJsonMeta,
+          analysisDataJson.isAcceptableOrUnknown(
+              data['analysis_data_json']!, _analysisDataJsonMeta));
+    } else if (isInserting) {
+      context.missing(_analysisDataJsonMeta);
+    }
+    if (data.containsKey('generated_at')) {
+      context.handle(
+          _generatedAtMeta,
+          generatedAt.isAcceptableOrUnknown(
+              data['generated_at']!, _generatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_generatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AiInsight map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AiInsight(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      recommendationsJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}recommendations_json'])!,
+      analysisDataJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}analysis_data_json'])!,
+      generatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}generated_at'])!,
+    );
+  }
+
+  @override
+  $AiInsightsTable createAlias(String alias) {
+    return $AiInsightsTable(attachedDatabase, alias);
+  }
+}
+
+class AiInsight extends DataClass implements Insertable<AiInsight> {
+  final int id;
+  final String recommendationsJson;
+  final String analysisDataJson;
+  final DateTime generatedAt;
+  const AiInsight(
+      {required this.id,
+      required this.recommendationsJson,
+      required this.analysisDataJson,
+      required this.generatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['recommendations_json'] = Variable<String>(recommendationsJson);
+    map['analysis_data_json'] = Variable<String>(analysisDataJson);
+    map['generated_at'] = Variable<DateTime>(generatedAt);
+    return map;
+  }
+
+  AiInsightsCompanion toCompanion(bool nullToAbsent) {
+    return AiInsightsCompanion(
+      id: Value(id),
+      recommendationsJson: Value(recommendationsJson),
+      analysisDataJson: Value(analysisDataJson),
+      generatedAt: Value(generatedAt),
+    );
+  }
+
+  factory AiInsight.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AiInsight(
+      id: serializer.fromJson<int>(json['id']),
+      recommendationsJson:
+          serializer.fromJson<String>(json['recommendationsJson']),
+      analysisDataJson: serializer.fromJson<String>(json['analysisDataJson']),
+      generatedAt: serializer.fromJson<DateTime>(json['generatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'recommendationsJson': serializer.toJson<String>(recommendationsJson),
+      'analysisDataJson': serializer.toJson<String>(analysisDataJson),
+      'generatedAt': serializer.toJson<DateTime>(generatedAt),
+    };
+  }
+
+  AiInsight copyWith(
+          {int? id,
+          String? recommendationsJson,
+          String? analysisDataJson,
+          DateTime? generatedAt}) =>
+      AiInsight(
+        id: id ?? this.id,
+        recommendationsJson: recommendationsJson ?? this.recommendationsJson,
+        analysisDataJson: analysisDataJson ?? this.analysisDataJson,
+        generatedAt: generatedAt ?? this.generatedAt,
+      );
+  AiInsight copyWithCompanion(AiInsightsCompanion data) {
+    return AiInsight(
+      id: data.id.present ? data.id.value : this.id,
+      recommendationsJson: data.recommendationsJson.present
+          ? data.recommendationsJson.value
+          : this.recommendationsJson,
+      analysisDataJson: data.analysisDataJson.present
+          ? data.analysisDataJson.value
+          : this.analysisDataJson,
+      generatedAt:
+          data.generatedAt.present ? data.generatedAt.value : this.generatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiInsight(')
+          ..write('id: $id, ')
+          ..write('recommendationsJson: $recommendationsJson, ')
+          ..write('analysisDataJson: $analysisDataJson, ')
+          ..write('generatedAt: $generatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, recommendationsJson, analysisDataJson, generatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AiInsight &&
+          other.id == this.id &&
+          other.recommendationsJson == this.recommendationsJson &&
+          other.analysisDataJson == this.analysisDataJson &&
+          other.generatedAt == this.generatedAt);
+}
+
+class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
+  final Value<int> id;
+  final Value<String> recommendationsJson;
+  final Value<String> analysisDataJson;
+  final Value<DateTime> generatedAt;
+  const AiInsightsCompanion({
+    this.id = const Value.absent(),
+    this.recommendationsJson = const Value.absent(),
+    this.analysisDataJson = const Value.absent(),
+    this.generatedAt = const Value.absent(),
+  });
+  AiInsightsCompanion.insert({
+    this.id = const Value.absent(),
+    required String recommendationsJson,
+    required String analysisDataJson,
+    required DateTime generatedAt,
+  })  : recommendationsJson = Value(recommendationsJson),
+        analysisDataJson = Value(analysisDataJson),
+        generatedAt = Value(generatedAt);
+  static Insertable<AiInsight> custom({
+    Expression<int>? id,
+    Expression<String>? recommendationsJson,
+    Expression<String>? analysisDataJson,
+    Expression<DateTime>? generatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (recommendationsJson != null)
+        'recommendations_json': recommendationsJson,
+      if (analysisDataJson != null) 'analysis_data_json': analysisDataJson,
+      if (generatedAt != null) 'generated_at': generatedAt,
+    });
+  }
+
+  AiInsightsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? recommendationsJson,
+      Value<String>? analysisDataJson,
+      Value<DateTime>? generatedAt}) {
+    return AiInsightsCompanion(
+      id: id ?? this.id,
+      recommendationsJson: recommendationsJson ?? this.recommendationsJson,
+      analysisDataJson: analysisDataJson ?? this.analysisDataJson,
+      generatedAt: generatedAt ?? this.generatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (recommendationsJson.present) {
+      map['recommendations_json'] = Variable<String>(recommendationsJson.value);
+    }
+    if (analysisDataJson.present) {
+      map['analysis_data_json'] = Variable<String>(analysisDataJson.value);
+    }
+    if (generatedAt.present) {
+      map['generated_at'] = Variable<DateTime>(generatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiInsightsCompanion(')
+          ..write('id: $id, ')
+          ..write('recommendationsJson: $recommendationsJson, ')
+          ..write('analysisDataJson: $analysisDataJson, ')
+          ..write('generatedAt: $generatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $QuickTipsTable extends QuickTips
+    with TableInfo<$QuickTipsTable, QuickTip> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $QuickTipsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _tipsJsonMeta =
+      const VerificationMeta('tipsJson');
+  @override
+  late final GeneratedColumn<String> tipsJson = GeneratedColumn<String>(
+      'tips_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _generatedAtMeta =
+      const VerificationMeta('generatedAt');
+  @override
+  late final GeneratedColumn<DateTime> generatedAt = GeneratedColumn<DateTime>(
+      'generated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, tipsJson, generatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'quick_tips';
+  @override
+  VerificationContext validateIntegrity(Insertable<QuickTip> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('tips_json')) {
+      context.handle(_tipsJsonMeta,
+          tipsJson.isAcceptableOrUnknown(data['tips_json']!, _tipsJsonMeta));
+    } else if (isInserting) {
+      context.missing(_tipsJsonMeta);
+    }
+    if (data.containsKey('generated_at')) {
+      context.handle(
+          _generatedAtMeta,
+          generatedAt.isAcceptableOrUnknown(
+              data['generated_at']!, _generatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_generatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  QuickTip map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return QuickTip(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      tipsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tips_json'])!,
+      generatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}generated_at'])!,
+    );
+  }
+
+  @override
+  $QuickTipsTable createAlias(String alias) {
+    return $QuickTipsTable(attachedDatabase, alias);
+  }
+}
+
+class QuickTip extends DataClass implements Insertable<QuickTip> {
+  final int id;
+  final String tipsJson;
+  final DateTime generatedAt;
+  const QuickTip(
+      {required this.id, required this.tipsJson, required this.generatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['tips_json'] = Variable<String>(tipsJson);
+    map['generated_at'] = Variable<DateTime>(generatedAt);
+    return map;
+  }
+
+  QuickTipsCompanion toCompanion(bool nullToAbsent) {
+    return QuickTipsCompanion(
+      id: Value(id),
+      tipsJson: Value(tipsJson),
+      generatedAt: Value(generatedAt),
+    );
+  }
+
+  factory QuickTip.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return QuickTip(
+      id: serializer.fromJson<int>(json['id']),
+      tipsJson: serializer.fromJson<String>(json['tipsJson']),
+      generatedAt: serializer.fromJson<DateTime>(json['generatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'tipsJson': serializer.toJson<String>(tipsJson),
+      'generatedAt': serializer.toJson<DateTime>(generatedAt),
+    };
+  }
+
+  QuickTip copyWith({int? id, String? tipsJson, DateTime? generatedAt}) =>
+      QuickTip(
+        id: id ?? this.id,
+        tipsJson: tipsJson ?? this.tipsJson,
+        generatedAt: generatedAt ?? this.generatedAt,
+      );
+  QuickTip copyWithCompanion(QuickTipsCompanion data) {
+    return QuickTip(
+      id: data.id.present ? data.id.value : this.id,
+      tipsJson: data.tipsJson.present ? data.tipsJson.value : this.tipsJson,
+      generatedAt:
+          data.generatedAt.present ? data.generatedAt.value : this.generatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('QuickTip(')
+          ..write('id: $id, ')
+          ..write('tipsJson: $tipsJson, ')
+          ..write('generatedAt: $generatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, tipsJson, generatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is QuickTip &&
+          other.id == this.id &&
+          other.tipsJson == this.tipsJson &&
+          other.generatedAt == this.generatedAt);
+}
+
+class QuickTipsCompanion extends UpdateCompanion<QuickTip> {
+  final Value<int> id;
+  final Value<String> tipsJson;
+  final Value<DateTime> generatedAt;
+  const QuickTipsCompanion({
+    this.id = const Value.absent(),
+    this.tipsJson = const Value.absent(),
+    this.generatedAt = const Value.absent(),
+  });
+  QuickTipsCompanion.insert({
+    this.id = const Value.absent(),
+    required String tipsJson,
+    required DateTime generatedAt,
+  })  : tipsJson = Value(tipsJson),
+        generatedAt = Value(generatedAt);
+  static Insertable<QuickTip> custom({
+    Expression<int>? id,
+    Expression<String>? tipsJson,
+    Expression<DateTime>? generatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (tipsJson != null) 'tips_json': tipsJson,
+      if (generatedAt != null) 'generated_at': generatedAt,
+    });
+  }
+
+  QuickTipsCompanion copyWith(
+      {Value<int>? id, Value<String>? tipsJson, Value<DateTime>? generatedAt}) {
+    return QuickTipsCompanion(
+      id: id ?? this.id,
+      tipsJson: tipsJson ?? this.tipsJson,
+      generatedAt: generatedAt ?? this.generatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (tipsJson.present) {
+      map['tips_json'] = Variable<String>(tipsJson.value);
+    }
+    if (generatedAt.present) {
+      map['generated_at'] = Variable<DateTime>(generatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('QuickTipsCompanion(')
+          ..write('id: $id, ')
+          ..write('tipsJson: $tipsJson, ')
+          ..write('generatedAt: $generatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$SessionDatabase extends GeneratedDatabase {
   _$SessionDatabase(QueryExecutor e) : super(e);
   $SessionDatabaseManager get managers => $SessionDatabaseManager(this);
   late final $SessionsTable sessions = $SessionsTable(this);
+  late final $AiInsightsTable aiInsights = $AiInsightsTable(this);
+  late final $QuickTipsTable quickTips = $QuickTipsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [sessions];
+  List<DatabaseSchemaEntity> get allSchemaEntities =>
+      [sessions, aiInsights, quickTips];
 }
 
 typedef $$SessionsTableCreateCompanionBuilder = SessionsCompanion Function({
@@ -631,10 +1130,242 @@ typedef $$SessionsTableProcessedTableManager = ProcessedTableManager<
     (Session, BaseReferences<_$SessionDatabase, $SessionsTable, Session>),
     Session,
     PrefetchHooks Function()>;
+typedef $$AiInsightsTableCreateCompanionBuilder = AiInsightsCompanion Function({
+  Value<int> id,
+  required String recommendationsJson,
+  required String analysisDataJson,
+  required DateTime generatedAt,
+});
+typedef $$AiInsightsTableUpdateCompanionBuilder = AiInsightsCompanion Function({
+  Value<int> id,
+  Value<String> recommendationsJson,
+  Value<String> analysisDataJson,
+  Value<DateTime> generatedAt,
+});
+
+class $$AiInsightsTableFilterComposer
+    extends FilterComposer<_$SessionDatabase, $AiInsightsTable> {
+  $$AiInsightsTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get recommendationsJson => $state.composableBuilder(
+      column: $state.table.recommendationsJson,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get analysisDataJson => $state.composableBuilder(
+      column: $state.table.analysisDataJson,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get generatedAt => $state.composableBuilder(
+      column: $state.table.generatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$AiInsightsTableOrderingComposer
+    extends OrderingComposer<_$SessionDatabase, $AiInsightsTable> {
+  $$AiInsightsTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get recommendationsJson => $state.composableBuilder(
+      column: $state.table.recommendationsJson,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get analysisDataJson => $state.composableBuilder(
+      column: $state.table.analysisDataJson,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get generatedAt => $state.composableBuilder(
+      column: $state.table.generatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+class $$AiInsightsTableTableManager extends RootTableManager<
+    _$SessionDatabase,
+    $AiInsightsTable,
+    AiInsight,
+    $$AiInsightsTableFilterComposer,
+    $$AiInsightsTableOrderingComposer,
+    $$AiInsightsTableCreateCompanionBuilder,
+    $$AiInsightsTableUpdateCompanionBuilder,
+    (AiInsight, BaseReferences<_$SessionDatabase, $AiInsightsTable, AiInsight>),
+    AiInsight,
+    PrefetchHooks Function()> {
+  $$AiInsightsTableTableManager(_$SessionDatabase db, $AiInsightsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$AiInsightsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$AiInsightsTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> recommendationsJson = const Value.absent(),
+            Value<String> analysisDataJson = const Value.absent(),
+            Value<DateTime> generatedAt = const Value.absent(),
+          }) =>
+              AiInsightsCompanion(
+            id: id,
+            recommendationsJson: recommendationsJson,
+            analysisDataJson: analysisDataJson,
+            generatedAt: generatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String recommendationsJson,
+            required String analysisDataJson,
+            required DateTime generatedAt,
+          }) =>
+              AiInsightsCompanion.insert(
+            id: id,
+            recommendationsJson: recommendationsJson,
+            analysisDataJson: analysisDataJson,
+            generatedAt: generatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$AiInsightsTableProcessedTableManager = ProcessedTableManager<
+    _$SessionDatabase,
+    $AiInsightsTable,
+    AiInsight,
+    $$AiInsightsTableFilterComposer,
+    $$AiInsightsTableOrderingComposer,
+    $$AiInsightsTableCreateCompanionBuilder,
+    $$AiInsightsTableUpdateCompanionBuilder,
+    (AiInsight, BaseReferences<_$SessionDatabase, $AiInsightsTable, AiInsight>),
+    AiInsight,
+    PrefetchHooks Function()>;
+typedef $$QuickTipsTableCreateCompanionBuilder = QuickTipsCompanion Function({
+  Value<int> id,
+  required String tipsJson,
+  required DateTime generatedAt,
+});
+typedef $$QuickTipsTableUpdateCompanionBuilder = QuickTipsCompanion Function({
+  Value<int> id,
+  Value<String> tipsJson,
+  Value<DateTime> generatedAt,
+});
+
+class $$QuickTipsTableFilterComposer
+    extends FilterComposer<_$SessionDatabase, $QuickTipsTable> {
+  $$QuickTipsTableFilterComposer(super.$state);
+  ColumnFilters<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get tipsJson => $state.composableBuilder(
+      column: $state.table.tipsJson,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get generatedAt => $state.composableBuilder(
+      column: $state.table.generatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$QuickTipsTableOrderingComposer
+    extends OrderingComposer<_$SessionDatabase, $QuickTipsTable> {
+  $$QuickTipsTableOrderingComposer(super.$state);
+  ColumnOrderings<int> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get tipsJson => $state.composableBuilder(
+      column: $state.table.tipsJson,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get generatedAt => $state.composableBuilder(
+      column: $state.table.generatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+class $$QuickTipsTableTableManager extends RootTableManager<
+    _$SessionDatabase,
+    $QuickTipsTable,
+    QuickTip,
+    $$QuickTipsTableFilterComposer,
+    $$QuickTipsTableOrderingComposer,
+    $$QuickTipsTableCreateCompanionBuilder,
+    $$QuickTipsTableUpdateCompanionBuilder,
+    (QuickTip, BaseReferences<_$SessionDatabase, $QuickTipsTable, QuickTip>),
+    QuickTip,
+    PrefetchHooks Function()> {
+  $$QuickTipsTableTableManager(_$SessionDatabase db, $QuickTipsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$QuickTipsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$QuickTipsTableOrderingComposer(ComposerState(db, table)),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> tipsJson = const Value.absent(),
+            Value<DateTime> generatedAt = const Value.absent(),
+          }) =>
+              QuickTipsCompanion(
+            id: id,
+            tipsJson: tipsJson,
+            generatedAt: generatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String tipsJson,
+            required DateTime generatedAt,
+          }) =>
+              QuickTipsCompanion.insert(
+            id: id,
+            tipsJson: tipsJson,
+            generatedAt: generatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$QuickTipsTableProcessedTableManager = ProcessedTableManager<
+    _$SessionDatabase,
+    $QuickTipsTable,
+    QuickTip,
+    $$QuickTipsTableFilterComposer,
+    $$QuickTipsTableOrderingComposer,
+    $$QuickTipsTableCreateCompanionBuilder,
+    $$QuickTipsTableUpdateCompanionBuilder,
+    (QuickTip, BaseReferences<_$SessionDatabase, $QuickTipsTable, QuickTip>),
+    QuickTip,
+    PrefetchHooks Function()>;
 
 class $SessionDatabaseManager {
   final _$SessionDatabase _db;
   $SessionDatabaseManager(this._db);
   $$SessionsTableTableManager get sessions =>
       $$SessionsTableTableManager(_db, _db.sessions);
+  $$AiInsightsTableTableManager get aiInsights =>
+      $$AiInsightsTableTableManager(_db, _db.aiInsights);
+  $$QuickTipsTableTableManager get quickTips =>
+      $$QuickTipsTableTableManager(_db, _db.quickTips);
 }

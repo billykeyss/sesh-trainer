@@ -6,6 +6,21 @@ import 'dart:io';
 
 part 'session_database.g.dart';
 
+// Table for cached AI insights
+class AiInsights extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get recommendationsJson => text()();
+  TextColumn get analysisDataJson => text()();
+  DateTimeColumn get generatedAt => dateTime()();
+}
+
+// Table for quick tips cache
+class QuickTips extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get tipsJson => text()();
+  DateTimeColumn get generatedAt => dateTime()();
+}
+
 // Define the table
 class Sessions extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -18,7 +33,7 @@ class Sessions extends Table {
   TextColumn get data => text()();
 }
 
-@DriftDatabase(tables: [Sessions])
+@DriftDatabase(tables: [Sessions, AiInsights, QuickTips])
 class SessionDatabase extends _$SessionDatabase {
   // Private constructor for singleton pattern
   SessionDatabase._() : super(_openConnection());
@@ -32,7 +47,21 @@ class SessionDatabase extends _$SessionDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (Migrator m) async {
+          await m.createAll();
+        },
+        onUpgrade: (Migrator m, int from, int to) async {
+          if (from < 2) {
+            // Create new tables added in version 2
+            await m.createTable(aiInsights);
+            await m.createTable(quickTips);
+          }
+        },
+      );
 
   Future<int> insertSession(SessionsCompanion session) =>
       into(sessions).insert(session);
@@ -56,6 +85,44 @@ class SessionDatabase extends _$SessionDatabase {
       ),
       mode: InsertMode.replace,
     );
+  }
+
+  // ----- AI Insights helpers -----
+
+  Future<int> insertInsight(AiInsightsCompanion insight) =>
+      into(aiInsights).insert(insight);
+
+  Future<AiInsight?> getLatestInsight() async {
+    return (select(aiInsights)
+          ..orderBy([
+            (tbl) => OrderingTerm(
+                expression: tbl.generatedAt, mode: OrderingMode.desc)
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<void> clearInsights() async {
+    await delete(aiInsights).go();
+  }
+
+  // ----- Quick tips helpers -----
+
+  Future<int> insertQuickTip(QuickTipsCompanion tip) =>
+      into(quickTips).insert(tip);
+
+  Future<QuickTip?> getLatestQuickTip() async {
+    return (select(quickTips)
+          ..orderBy([
+            (tbl) => OrderingTerm(
+                expression: tbl.generatedAt, mode: OrderingMode.desc)
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<void> clearQuickTips() async {
+    await delete(quickTips).go();
   }
 }
 

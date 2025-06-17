@@ -4,6 +4,7 @@ import '../database/session_database.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/ai_recommendations_card.dart';
 import '../services/llm_insights_service.dart';
+import 'dart:convert';
 
 /// Example insights page showing how to integrate AI recommendations
 /// Replace your existing insights_page.dart content with this approach
@@ -17,13 +18,31 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
   List<Session> sessions = [];
   bool isLoading = true;
   List<String> quickTips = [];
+  DateTime? quickTipsGeneratedAt;
   bool loadingTips = false;
 
   @override
   void initState() {
     super.initState();
     _database = SessionDatabase();
-    _loadSessions();
+    _loadCachedQuickTips();
+    // Defer session loading to next frame to avoid inherited widget issues
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadSessions();
+    });
+  }
+
+  Future<void> _loadCachedQuickTips() async {
+    final db = SessionDatabase();
+    final cached = await db.getLatestQuickTip();
+    if (cached != null) {
+      setState(() {
+        quickTips = (jsonDecode(cached.tipsJson) as List<dynamic>)
+            .map((e) => e.toString())
+            .toList();
+        quickTipsGeneratedAt = cached.generatedAt;
+      });
+    }
   }
 
   Future<void> _loadSessions() async {
@@ -37,26 +56,28 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
         isLoading = false;
       });
 
-      // Load quick tips if we have recent sessions
-      if (sessions.isNotEmpty) {
-        _loadQuickTips();
+      // Only load cached quick tips; user can regenerate via refresh icon
+      if (quickTips.isEmpty) {
+        _loadCachedQuickTips();
       }
     } catch (e) {
       setState(() {
         isLoading = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading training data: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error loading training data: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
     }
   }
 
-  Future<void> _loadQuickTips() async {
+  Future<void> _refreshQuickTips() async {
     setState(() {
       loadingTips = true;
     });
@@ -76,6 +97,7 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
 
         setState(() {
           quickTips = tips;
+          quickTipsGeneratedAt = DateTime.now();
           loadingTips = false;
         });
       } else {
@@ -89,14 +111,16 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
         quickTips = [];
         loadingTips = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error generating quick tips: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error generating quick tips: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
     }
   }
 
@@ -225,9 +249,6 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
                   weightUnit: selectedUnit,
                 ),
                 SizedBox(height: 24),
-
-                // Performance Analysis Section (you can add more sections here)
-                _buildPerformanceAnalysisSection(),
               ],
             ),
           ),
@@ -289,11 +310,25 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
                 if (!loadingTips)
                   IconButton(
                     icon: Icon(Icons.refresh),
-                    onPressed: _loadQuickTips,
+                    onPressed: _refreshQuickTips,
                     tooltip: 'Refresh tips',
                   ),
               ],
             ),
+            if (quickTipsGeneratedAt != null)
+              Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.schedule, size: 14, color: Colors.grey[500]),
+                    SizedBox(width: 4),
+                    Text(
+                      'Generated ${_formatTimeAgo(quickTipsGeneratedAt!)}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+              ),
             SizedBox(height: 16),
             if (loadingTips)
               Container(
@@ -323,10 +358,17 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
                           margin: EdgeInsets.only(bottom: 8),
                           padding: EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.05),
+                            color: (Theme.of(context).brightness ==
+                                    Brightness.dark)
+                                ? Colors.green.withOpacity(0.15)
+                                : Colors.green.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: Colors.green.withOpacity(0.2),
+                              color: Colors.green.withOpacity(
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? 0.3
+                                      : 0.2),
                               width: 1,
                             ),
                           ),
@@ -344,7 +386,10 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
                                   tip,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey[800],
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey[200]
+                                        : Colors.grey[800],
                                   ),
                                 ),
                               ),
@@ -370,60 +415,15 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
     );
   }
 
-  Widget _buildPerformanceAnalysisSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.analytics_rounded, color: Colors.blue),
-                SizedBox(width: 12),
-                Text(
-                  'Performance Analysis',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Basic analytics (extend with your existing insights_page.dart content)',
-              style: TextStyle(
-                color: Colors.grey[600],
-              ),
-            ),
-            SizedBox(height: 12),
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total Sessions: ${sessions.length}',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Add your existing analytics from insights_page.dart here',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+    if (diff.inDays > 0)
+      return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
+    if (diff.inHours > 0)
+      return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
+    if (diff.inMinutes > 0)
+      return '${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''} ago';
+    return 'just now';
   }
 }

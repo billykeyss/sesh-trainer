@@ -1,9 +1,12 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+
+import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+
 import '../database/session_database.dart';
+import 'llm_insight_prompts.dart';
 
 class LLMInsightsService {
   // Get API key from environment variables
@@ -42,45 +45,11 @@ class LLMInsightsService {
       // Prepare training data summary for AI analysis
       final analysisData = _prepareTrainingAnalysis(sessions, weightUnit);
 
-      final prompt = '''
-You are an expert climbing strength coach trained in Lattice Training methodology. Analyze this hangboard/finger strength training data and provide personalized recommendations following evidence-based climbing training principles:
-
-Training Analysis:
-${jsonEncode(analysisData)}
-
-${specificGoal != null ? 'Specific Goal: $specificGoal' : ''}
-
-Apply Lattice Training principles:
-- Periodization (Base → Strength → Power → Performance phases)
-- Load management and progressive overload
-- Finger strength development (max hangs, repeaters, density hangs)
-- Recovery protocols and CNS management
-- Assessment-driven training adjustments
-- Sport-specific adaptations for climbing
-
-Provide exactly 4-6 comprehensive recommendations in JSON format:
-[
-  {
-    "title": "Clear recommendation title",
-    "description": "Detailed explanation with climbing-specific advice and Lattice methodology",
-    "priority": "high/medium/low",
-    "category": "finger_strength/load_management/periodization/recovery/assessment",
-    "actionItems": ["Specific climbing training action 1", "Specific climbing training action 2"]
-  }
-]
-
-Focus on:
-- Finger strength progression (max hangs, repeaters, edge sizes)
-- Training load and volume management
-- Periodization and training phase recommendations
-- Recovery protocols (sleep, nutrition, deload weeks)
-- Injury prevention for finger/shoulder health
-- Assessment benchmarks and testing protocols
-- Training specificity for climbing performance
-
-Use climbing-specific terminology and reference Lattice Training concepts where appropriate.
-Respond with ONLY the JSON array, no other text.
-''';
+      // Build the prompt using the centralized prompt builder
+      final prompt = LLMInsightPrompts.insightsPrompt(
+        analysisData: analysisData,
+        specificGoal: specificGoal,
+      );
 
       final response = await model.generateContent([Content.text(prompt)]);
       final responseText = response.text;
@@ -97,11 +66,23 @@ Respond with ONLY the JSON array, no other text.
           .map((rec) => TrainingRecommendation.fromJson(rec))
           .toList();
 
-      return TrainingInsights(
+      final insights = TrainingInsights(
         recommendations: recommendations,
         analysisData: analysisData,
         generatedAt: DateTime.now(),
       );
+
+      // Persist to database
+      final db = SessionDatabase();
+      await db.clearInsights(); // keep only latest
+      await db.insertInsight(AiInsightsCompanion(
+        recommendationsJson:
+            Value(jsonEncode(recommendations.map((e) => e.toJson()).toList())),
+        analysisDataJson: Value(jsonEncode(analysisData)),
+        generatedAt: Value(insights.generatedAt),
+      ));
+
+      return insights;
     } catch (e) {
       debugPrint('Error generating AI insights: $e');
       throw Exception('Failed to generate AI insights: $e');
@@ -115,32 +96,17 @@ Respond with ONLY the JSON array, no other text.
   }) async {
     // Check if API key is configured
     if (_apiKey.isEmpty) {
-      throw Exception('Gemini API key not configured');
+      debugPrint('Gemini API key not configured.');
+      throw Exception('API Key empty cannot generate insights');
     }
 
     try {
       final recentData = _prepareRecentAnalysis(recentSessions, weightUnit);
 
-      final prompt = '''
-You are a climbing strength coach using Lattice Training methodology. Based on this recent hangboard/finger strength training data, provide 3-4 concise, actionable tips following evidence-based climbing training principles:
-
-Recent Training Data:
-${jsonEncode(recentData)}
-
-Apply Lattice Training insights for:
-- Finger strength progression and load management
-- Recovery optimization between sessions
-- Training intensity and volume adjustments
-- Injury prevention protocols
-- Performance benchmarking
-
-Focus on immediate improvements for next hangboard session, climbing-specific recovery recommendations, and motivation.
-
-Use climbing terminology: max hangs, repeaters, edge sizes, crimp/open hand positions, recruitment protocols, CNS recovery.
-
-Respond with a JSON array of tip strings only:
-["climbing-specific tip 1", "climbing-specific tip 2", "climbing-specific tip 3", "climbing-specific tip 4"]
-''';
+      // Build the prompt using the centralized prompt builder
+      final prompt = LLMInsightPrompts.quickTipsPrompt(
+        recentData: recentData,
+      );
 
       final response = await model.generateContent([Content.text(prompt)]);
       final responseText = response.text;
@@ -154,10 +120,18 @@ Respond with a JSON array of tip strings only:
           .map((tip) => tip.toString())
           .toList();
 
+      // Persist to DB
+      final db = SessionDatabase();
+      await db.clearQuickTips();
+      await db.insertQuickTip(QuickTipsCompanion(
+        tipsJson: Value(jsonEncode(tips)),
+        generatedAt: Value(DateTime.now()),
+      ));
+
       return tips;
     } catch (e) {
       debugPrint('Error generating quick tips: $e');
-      throw Exception('Failed to generate quick tips: $e');
+      throw Exception('Error generating quick tips');
     }
   }
 
@@ -166,39 +140,13 @@ Respond with a JSON array of tip strings only:
     required List<Session> sessions,
     required String weightUnit,
   }) async {
-    if (_apiKey.isEmpty) {
-      throw Exception('Gemini API key not configured');
-    }
-
     try {
       final performanceData = _preparePerformanceAnalysis(sessions, weightUnit);
 
-      final prompt = '''
-You are a climbing strength coach using Lattice Training methodology. Analyze this hangboard/finger strength training performance data using evidence-based climbing training principles:
-
-Performance Data:
-${jsonEncode(performanceData)}
-
-Apply Lattice Training assessment protocols:
-- Finger strength benchmarks (20mm edge, bodyweight percentages)
-- Load progression patterns and periodization analysis
-- Training volume and recovery balance assessment
-- CNS fatigue and adaptation indicators
-- Climbing-specific strength development patterns
-
-Provide analysis in this exact JSON format:
-{
-  "strengthTrend": "improving/declining/stable/plateau",
-  "consistencyRating": "excellent/good/needs_improvement/inconsistent",
-  "weakAreas": ["specific climbing weakness 1", "specific climbing weakness 2"],
-  "strongSuits": ["climbing strength 1", "climbing strength 2"],
-  "nextGoals": ["climbing-specific goal 1", "climbing-specific goal 2"],
-  "trainingPhase": "base_building/strength_phase/power_phase/performance_phase/deload_needed"
-}
-
-Use climbing-specific terminology and Lattice Training concepts for assessment.
-Respond with ONLY the JSON object, no other text.
-''';
+      // Build the prompt using the centralized prompt builder
+      final prompt = LLMInsightPrompts.performanceAnalysisPrompt(
+        performanceData: performanceData,
+      );
 
       final response = await model.generateContent([Content.text(prompt)]);
       final responseText = response.text;
@@ -213,7 +161,7 @@ Respond with ONLY the JSON object, no other text.
       return PerformanceAnalysis.fromJson(analysis);
     } catch (e) {
       debugPrint('Error analyzing performance: $e');
-      throw Exception('Failed to analyze performance: $e');
+      throw Exception('Error analyzing performance');
     }
   }
 
@@ -420,125 +368,5 @@ Respond with ONLY the JSON object, no other text.
     if (averageGap <= 7) return 80;
     if (averageGap <= 14) return 60;
     return 40;
-  }
-}
-
-/// Data class for training insights
-class TrainingInsights {
-  final List<TrainingRecommendation> recommendations;
-  final Map<String, dynamic> analysisData;
-  final DateTime generatedAt;
-
-  TrainingInsights({
-    required this.recommendations,
-    required this.analysisData,
-    required this.generatedAt,
-  });
-}
-
-/// Data class for individual training recommendations
-class TrainingRecommendation {
-  final String title;
-  final String description;
-  final String priority; // high, medium, low
-  final String category; // strength, technique, recovery, etc.
-  final List<String> actionItems;
-
-  TrainingRecommendation({
-    required this.title,
-    required this.description,
-    required this.priority,
-    required this.category,
-    required this.actionItems,
-  });
-
-  factory TrainingRecommendation.fromJson(Map<String, dynamic> json) {
-    return TrainingRecommendation(
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      priority: json['priority'] ?? 'medium',
-      category: json['category'] ?? 'general',
-      actionItems: (json['actionItems'] as List<dynamic>?)
-              ?.map((item) => item.toString())
-              .toList() ??
-          [],
-    );
-  }
-
-  Color get priorityColor {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return const Color(0xFFE57373); // Red
-      case 'medium':
-        return const Color(0xFFFFB74D); // Orange
-      case 'low':
-        return const Color(0xFF81C784); // Green
-      default:
-        return const Color(0xFF90A4AE); // Grey
-    }
-  }
-
-  Color get categoryColor {
-    switch (category.toLowerCase()) {
-      case 'finger_strength':
-        return const Color(0xFF42A5F5); // Blue
-      case 'load_management':
-        return const Color(0xFF66BB6A); // Green
-      case 'periodization':
-        return const Color(0xFFFF9800); // Orange
-      case 'recovery':
-        return const Color(0xFFAB47BC); // Purple
-      case 'assessment':
-        return const Color(0xFF26A69A); // Teal
-      case 'consistency':
-        return const Color(0xFFFF7043); // Deep Orange
-      case 'strength':
-        return const Color(0xFF42A5F5); // Blue (fallback)
-      case 'technique':
-        return const Color(0xFF66BB6A); // Green (fallback)
-      case 'goal_setting':
-        return const Color(0xFF26A69A); // Teal (fallback)
-      default:
-        return const Color(0xFF78909C); // Blue Grey
-    }
-  }
-}
-
-/// Data class for performance analysis
-class PerformanceAnalysis {
-  final String strengthTrend;
-  final String consistencyRating;
-  final List<String> weakAreas;
-  final List<String> strongSuits;
-  final List<String> nextGoals;
-  final String trainingPhase;
-
-  PerformanceAnalysis({
-    required this.strengthTrend,
-    required this.consistencyRating,
-    required this.weakAreas,
-    required this.strongSuits,
-    required this.nextGoals,
-    required this.trainingPhase,
-  });
-
-  factory PerformanceAnalysis.fromJson(Map<String, dynamic> json) {
-    return PerformanceAnalysis(
-      strengthTrend: json['strengthTrend'] ?? 'stable',
-      consistencyRating: json['consistencyRating'] ?? 'good',
-      weakAreas: (json['weakAreas'] as List<dynamic>?)
-              ?.map((item) => item.toString())
-              .toList() ??
-          [],
-      strongSuits: (json['strongSuits'] as List<dynamic>?)
-              ?.map((item) => item.toString())
-              .toList() ??
-          [],
-      nextGoals: (json['nextGoals'] as List<dynamic>?)
-              ?.map((item) => item.toString())
-              .toList() ??
-          [],
-      trainingPhase: json['trainingPhase'] ?? 'intermediate',
-    );
   }
 }

@@ -936,7 +936,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildActionButton(String label, IconData icon, Color color,
       VoidCallback onPressed, bool isDarkMode) {
     return Container(
-      height: 48,
+      height: 56,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(

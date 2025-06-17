@@ -403,124 +403,168 @@ class _CalendarViewState extends State<CalendarView> {
                                     final maxWeight =
                                         _getMaxWeight(session, selectedUnit);
 
-                                    return Container(
-                                      margin: EdgeInsets.only(bottom: 12),
-                                      decoration: BoxDecoration(
-                                        color: isDarkMode
-                                            ? Colors.grey[800]
-                                            : Colors.grey[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.blue.withOpacity(0.2),
-                                          width: 1,
-                                        ),
+                                    return Dismissible(
+                                      key: ValueKey(session.id),
+                                      direction: DismissDirection.endToStart,
+                                      background: Container(
+                                        alignment: Alignment.centerRight,
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 20),
+                                        color: Colors.red,
+                                        child: Icon(Icons.delete,
+                                            color: Colors.white),
                                       ),
-                                      child: ListTile(
-                                        contentPadding: EdgeInsets.all(16),
-                                        leading: Container(
-                                          padding: EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                Colors.blue.withOpacity(0.2),
-                                                Colors.purple.withOpacity(0.1),
-                                              ],
+                                      confirmDismiss: (dir) async {
+                                        return await showDialog(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: Text('Delete session?'),
+                                            content: Text(
+                                                'This action cannot be undone.'),
+                                            actions: [
+                                              TextButton(
+                                                child: Text('Cancel'),
+                                                onPressed: () =>
+                                                    Navigator.of(context)
+                                                        .pop(false),
+                                              ),
+                                              TextButton(
+                                                child: Text('Delete'),
+                                                onPressed: () =>
+                                                    Navigator.of(context)
+                                                        .pop(true),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                      onDismissed: (_) async {
+                                        await _database
+                                            .deleteSession(session.id);
+                                        _loadSessions();
+                                      },
+                                      child: Container(
+                                        margin: EdgeInsets.only(bottom: 12),
+                                        decoration: BoxDecoration(
+                                          color: isDarkMode
+                                              ? Colors.grey[800]
+                                              : Colors.grey[50],
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: Colors.blue.withOpacity(0.2),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: ListTile(
+                                          contentPadding: EdgeInsets.all(16),
+                                          leading: Container(
+                                            padding: EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Colors.blue.withOpacity(0.2),
+                                                  Colors.purple
+                                                      .withOpacity(0.1),
+                                                ],
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            child: Icon(
+                                              Icons.trending_up,
+                                              color: Colors.blue,
+                                              size: 24,
+                                            ),
                                           ),
-                                          child: Icon(
-                                            Icons.trending_up,
-                                            color: Colors.blue,
-                                            size: 24,
+                                          title: Text(
+                                            session.name,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                              color: isDarkMode
+                                                  ? Colors.white
+                                                  : Colors.grey[800],
+                                            ),
                                           ),
-                                        ),
-                                        title: Text(
-                                          session.name,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: isDarkMode
-                                                ? Colors.white
-                                                : Colors.grey[800],
-                                          ),
-                                        ),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            SizedBox(height: 8),
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.schedule,
-                                                  size: 16,
-                                                  color: isDarkMode
-                                                      ? Colors.grey[400]
-                                                      : Colors.grey[600],
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  DateFormat('HH:mm').format(
-                                                      session.sessionTime),
-                                                  style: TextStyle(
-                                                    fontSize: 14,
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.schedule,
+                                                    size: 16,
                                                     color: isDarkMode
                                                         ? Colors.grey[400]
                                                         : Colors.grey[600],
                                                   ),
-                                                ),
-                                                SizedBox(width: 16),
-                                                Icon(
-                                                  Icons.timer,
-                                                  size: 16,
-                                                  color: isDarkMode
-                                                      ? Colors.grey[400]
-                                                      : Colors.grey[600],
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  _formatDuration(
-                                                      session.elapsedTimeMs),
-                                                  style: TextStyle(
-                                                    fontSize: 14,
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    DateFormat('HH:mm').format(
+                                                        session.sessionTime),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: isDarkMode
+                                                          ? Colors.grey[400]
+                                                          : Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 16),
+                                                  Icon(
+                                                    Icons.timer,
+                                                    size: 16,
                                                     color: isDarkMode
                                                         ? Colors.grey[400]
                                                         : Colors.grey[600],
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(height: 4),
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.fitness_center,
-                                                  size: 16,
-                                                  color: Colors.orange,
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  'Max: ${maxWeight.toStringAsFixed(1)} $selectedUnit',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w600,
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    _formatDuration(
+                                                        session.elapsedTimeMs),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: isDarkMode
+                                                          ? Colors.grey[400]
+                                                          : Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.fitness_center,
+                                                    size: 16,
                                                     color: Colors.orange,
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'Max: ${maxWeight.toStringAsFixed(1)} $selectedUnit',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.orange,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          trailing: Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 16,
+                                            color: isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                          ),
+                                          onTap: () =>
+                                              _viewSessionDetails(session),
                                         ),
-                                        trailing: Icon(
-                                          Icons.arrow_forward_ios,
-                                          size: 16,
-                                          color: isDarkMode
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600],
-                                        ),
-                                        onTap: () =>
-                                            _viewSessionDetails(session),
                                       ),
                                     );
                                   },
