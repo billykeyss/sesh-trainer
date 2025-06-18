@@ -129,6 +129,37 @@ class _CalendarViewState extends State<CalendarView> {
     return '${minutes}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  String _getDisplayName(Session session) {
+    final lower = session.name.toLowerCase();
+    if (lower.startsWith('session') || lower.startsWith('circuit training')) {
+      return DateFormat('MMM d, yyyy – HH:mm').format(session.sessionTime);
+    }
+    return session.name;
+  }
+
+  String _getSessionType(Session session) {
+    try {
+      if (session.data != null && session.data.isNotEmpty) {
+        final parsed = jsonDecode(session.data);
+        if (parsed is Map<String, dynamic>) {
+          final raw =
+              (parsed['sessionType'] ?? parsed['type'] ?? 'pull').toString();
+          switch (raw) {
+            case 'pull':
+              return 'Pull';
+            case 'hangboard':
+              return 'Hangboard';
+            case 'circuit_training':
+              return 'Circuit';
+            default:
+              return raw.toString();
+          }
+        }
+      }
+    } catch (_) {}
+    return 'Pull';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -478,7 +509,7 @@ class _CalendarViewState extends State<CalendarView> {
                                             ),
                                           ),
                                           title: Text(
-                                            session.name,
+                                            _getDisplayName(session),
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 16,
@@ -492,6 +523,26 @@ class _CalendarViewState extends State<CalendarView> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.label,
+                                                    size: 16,
+                                                    color: Colors.green,
+                                                  ),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    _getSessionType(session),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.green,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(height: 4),
                                               Row(
                                                 children: [
                                                   Icon(

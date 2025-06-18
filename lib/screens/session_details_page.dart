@@ -417,6 +417,9 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 768;
 
+    // Consolidate vertical spacing between sections to make layout more compact
+    final double sectionSpacing = isTablet ? 24.0 : 16.0;
+
     // Modern color scheme inspired by SaaS dashboards
     final backgroundColor =
         isDarkMode ? const Color(0xFF0A0A0B) : const Color(0xFFFAFAFA);
@@ -482,18 +485,14 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                     ),
                   ),
                   title: _buildModernTitle(textPrimary, textSecondary),
-                  titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+                  titlePadding:
+                      EdgeInsets.only(left: isTablet ? 64.0 : 56.0, bottom: 16),
                 ),
                 actions: [
                   _buildModernActionButton(
                     icon: Icons.edit_outlined,
                     onPressed: () => _toggleNameEdit(),
                     tooltip: 'Edit session name',
-                  ),
-                  _buildModernActionButton(
-                    icon: Icons.share_outlined,
-                    onPressed: () => _shareSessionDetails(context),
-                    tooltip: 'Share session',
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -504,7 +503,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: isTablet ? 32.0 : 16.0,
-                    vertical: 24.0,
+                    vertical: sectionSpacing,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,11 +521,11 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                           accentColor: accentColor,
                           isTablet: isTablet,
                         ),
-                        const SizedBox(height: 32),
+                        SizedBox(height: sectionSpacing),
                       ] else ...[
                         _buildHangboardSummary(surfaceColor, borderColor,
                             textPrimary, textSecondary, accentColor),
-                        const SizedBox(height: 32),
+                        SizedBox(height: sectionSpacing),
                       ],
 
                       // Graph section with modern styling
@@ -541,7 +540,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                             convertedGraphData.isNotEmpty,
                       ),
 
-                      const SizedBox(height: 32),
+                      SizedBox(height: sectionSpacing),
 
                       // Session info section
                       _buildModernSection(
@@ -577,7 +576,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                         accentColor: accentColor,
                       ),
 
-                      const SizedBox(height: 32),
+                      SizedBox(height: sectionSpacing),
 
                       if (_sessionType == 'hangboard') ...[
                         _buildHangboardAnalyticsSection(
@@ -587,7 +586,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                             textSecondary,
                             accentColor,
                             isTablet),
-                        const SizedBox(height: 32),
+                        SizedBox(height: sectionSpacing),
                       ] else ...[
                         // Performance metrics in responsive grid
                         _buildModernSection(
@@ -636,7 +635,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                           accentColor: accentColor,
                         ),
 
-                        const SizedBox(height: 32),
+                        SizedBox(height: sectionSpacing),
 
                         // Endurance analysis
                         _buildModernSection(
@@ -656,7 +655,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                           accentColor: accentColor,
                         ),
 
-                        const SizedBox(height: 32),
+                        SizedBox(height: sectionSpacing),
 
                         // Training zones
                         _buildModernSection(
@@ -676,7 +675,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                           accentColor: accentColor,
                         ),
 
-                        const SizedBox(height: 32),
+                        SizedBox(height: sectionSpacing),
 
                         // Recovery analysis
                         _buildModernSection(
@@ -713,7 +712,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                           accentColor: accentColor,
                         ),
 
-                        const SizedBox(height: 32),
+                        SizedBox(height: sectionSpacing),
                       ],
 
                       // Volume trends
@@ -759,7 +758,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
                         },
                       ),
 
-                      const SizedBox(height: 48),
+                      SizedBox(height: sectionSpacing),
                     ],
                   ),
                 ),
@@ -810,6 +809,8 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
             onTap: _toggleNameEdit,
             child: Text(
               _nameController.text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: textPrimary,
                 fontSize: 20,
@@ -878,8 +879,8 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = isTablet ? 3 : 1;
-        final childAspectRatio = isTablet ? 1.2 : 2.5;
+        final crossAxisCount = isTablet ? 3 : 2;
+        final childAspectRatio = isTablet ? 1.2 : 1.0;
 
         return GridView.count(
           shrinkWrap: true,
@@ -1129,13 +1130,13 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
             ),
           ),
           Container(
-            height: 240,
             padding: const EdgeInsets.only(left: 8, right: 20, bottom: 20),
             child: WeightGraph(
               graphData: convertedGraphData,
               weightUnit: selectedUnit,
-              height: 240,
+              height: 300,
               showHeader: false,
+              showLegend: true,
             ),
           ),
         ],
@@ -1155,7 +1156,7 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: 4),
           child: Row(
             children: [
               Container(
@@ -1276,8 +1277,8 @@ class _SessionDetailsPageState extends State<SessionDetailsPage> {
   ) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = isTablet ? 3 : 1;
-        final childAspectRatio = isTablet ? 1.1 : 2.8;
+        final crossAxisCount = isTablet ? 3 : 2;
+        final childAspectRatio = isTablet ? 1.1 : 1.0;
 
         return GridView.builder(
           shrinkWrap: true,

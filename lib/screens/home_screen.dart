@@ -27,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   BluetoothDevice? connectedDevice;
   String elapsedTime = '0:00';
-  bool showTestButton = true;
+  bool showTestButton = false;
   bool isPaused = false;
 
   @override
