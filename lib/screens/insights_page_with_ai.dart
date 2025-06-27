@@ -113,10 +113,14 @@ class _InsightsPageWithAIState extends State<InsightsPageWithAI> {
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          final isRateLimit = e.toString().contains('Daily limit reached');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error generating quick tips: $e'),
-              backgroundColor: Colors.red,
+              content: Text(isRateLimit
+                  ? e.toString().replaceFirst('Exception: ', '')
+                  : 'Error generating quick tips: $e'),
+              backgroundColor: isRateLimit ? Colors.orange : Colors.red,
+              duration: Duration(seconds: isRateLimit ? 5 : 3),
             ),
           );
         }

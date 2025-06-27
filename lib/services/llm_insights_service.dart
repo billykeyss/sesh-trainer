@@ -8,6 +8,13 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import '../database/session_database.dart';
 import 'llm_insight_prompts.dart';
 
+/// LLM service with daily rate limiting for free tier usage
+///
+/// Rate limiting logic:
+/// - Checks timestamps of cached results (insights/quickTips tables)
+/// - If last result was generated today, blocks new API calls
+/// - Resets at midnight each day
+/// - Simple and reuses existing database tables
 class LLMInsightsService {
   // Get API key from environment variables
   static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
@@ -30,6 +37,49 @@ class LLMInsightsService {
     return _model!;
   }
 
+  /// Check if we can make an API call today (once per day limit)
+  static Future<bool> _canMakeApiCallToday(String apiType) async {
+    final db = SessionDatabase();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    switch (apiType) {
+      case 'insights':
+        final lastInsight = await db.getLatestInsight();
+        if (lastInsight == null) return true;
+        final lastInsightDate = DateTime(
+          lastInsight.generatedAt.year,
+          lastInsight.generatedAt.month,
+          lastInsight.generatedAt.day,
+        );
+        return lastInsightDate.isBefore(today);
+
+      case 'quickTips':
+        final lastTip = await db.getLatestQuickTip();
+        if (lastTip == null) return true;
+        final lastTipDate = DateTime(
+          lastTip.generatedAt.year,
+          lastTip.generatedAt.month,
+          lastTip.generatedAt.day,
+        );
+        return lastTipDate.isBefore(today);
+
+      default:
+        return false;
+    }
+  }
+
+  /// Get the next allowed time for API call (next day at midnight)
+  static Future<DateTime?> _getNextAllowedTime(String apiType) async {
+    if (await _canMakeApiCallToday(apiType)) {
+      return null; // Can call now
+    }
+
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    return tomorrow;
+  }
+
   /// Generates comprehensive training insights and recommendations
   static Future<TrainingInsights> generateInsights({
     required List<Session> sessions,
@@ -39,6 +89,13 @@ class LLMInsightsService {
     // Check if API key is configured
     if (_apiKey.isEmpty) {
       throw Exception('Gemini API key not configured');
+    }
+
+    // Check daily rate limit
+    if (!await _canMakeApiCallToday('insights')) {
+      final nextAllowed = await _getNextAllowedTime('insights');
+      throw Exception(
+          'Daily limit reached. You can generate new insights tomorrow after ${nextAllowed?.toLocal().toString().split(' ')[0] ?? 'midnight'}.');
     }
 
     try {
@@ -98,6 +155,13 @@ class LLMInsightsService {
     if (_apiKey.isEmpty) {
       debugPrint('Gemini API key not configured.');
       throw Exception('API Key empty cannot generate insights');
+    }
+
+    // Check daily rate limit
+    if (!await _canMakeApiCallToday('quickTips')) {
+      final nextAllowed = await _getNextAllowedTime('quickTips');
+      throw Exception(
+          'Daily limit reached. You can generate new tips tomorrow after ${nextAllowed?.toLocal().toString().split(' ')[0] ?? 'midnight'}.');
     }
 
     try {
